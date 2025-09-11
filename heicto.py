@@ -3,7 +3,6 @@ from tkinter import Tk, filedialog
 from PIL import Image
 import pillow_heif
 
-#test
 def convert_heic_to_image(input_path, output_path, format="JPEG"):
     """HEICファイルをJPEGまたはPNGに変換する関数"""
     heif_file = pillow_heif.read_heif(input_path)
