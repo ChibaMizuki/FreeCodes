@@ -6,13 +6,23 @@ import threading
 
 # yt-dlpのアプデ
 # pip install --upgrade yt-dlp
+# exe化
+# pyinstaller --noconsole --onefile main.py
 
+# キャンセル管理
+cancel_flag = False
+
+# 保存フォルダを開く
 def select_folder():
     folder = filedialog.askdirectory()
     if folder:
         save_path.set(folder)
 
+# ダウンロードを開始する
 def download_video():
+    global cancel_flag
+    cancel_flag = False
+
     url = url_entry.get()
     folder = save_path.get()
 
@@ -31,6 +41,7 @@ def download_video():
     thread = threading.Thread(target=run_download, args=(url, folder), daemon=True)
     thread.start()
 
+# ダウンロード状況の確認と実行
 def run_download(url, folder):
     # yt-dlpのprogress_hooksは随時情報更新し、指定した関数を毎回呼び出して辞書を渡す
     # {
@@ -45,6 +56,9 @@ def run_download(url, folder):
     # }
 
     def progress_hook(d):
+        global cancel_flag
+        if cancel_flag:
+            raise yt_dlp.utils.DownloadError("ユーザーによるキャンセル")
         if d['status'] == 'downloading':
             percent = d.get('_percent_str', '').strip()
             eta = d.get('_eta_str', '').strip()
@@ -70,15 +84,30 @@ def run_download(url, folder):
             ydl.download([url])
         progress.set("ダウンロード完了")
         messagebox.showinfo("完了", "ダウンロードが完了しました")
+    except yt_dlp.utils.DownloadError as e:
+        if "キャンセル" in str(e):
+            progress.set("キャンセルしました")
+        else:
+            progress.set("エラー発生")
+            messagebox.showerror("エラー", f"ダウンロードに失敗しました\n{e}")
     except Exception as e:
         progress.set("エラー発生")
         messagebox.showerror("エラー", f"ダウンロードに失敗しました\n{e}")
     finally:
         download_button.config(state="normal")
+        cancel_button.config(state="disabled")
 
+# キャンセル処理
+def cancel_download():
+    global cancel_flag
+    cancel_flag = True
+    progress.set("キャンセル中...")
+
+# ウィンドウを閉じる
 def close():
     root.destroy()
 
+# URLをクリア
 def clear_entry():
     url_entry.delete(0, tk.END)
 
@@ -99,8 +128,12 @@ tk.Label(path_frame, text="保存先: ").pack(side="left")
 tk.Entry(path_frame, textvariable=save_path, width=45).pack(side="left", padx=5)
 tk.Button(path_frame, text="選択", command=select_folder).pack(side="left")
 
-download_button = tk.Button(root, text="ダウンロード", command=download_video)
-download_button.pack(pady=15)
+button_frame = tk.Frame(root)
+button_frame.pack(pady=10)
+download_button = tk.Button(button_frame, text="ダウンロード", command=download_video)
+download_button.pack(side="left", padx=5)
+cancel_button = tk.Button(button_frame, text="キャンセル", command=cancel_download, state="disabled")
+cancel_button.pack(side="left", padx=5)
 
 progress = tk.StringVar()
 progress.set("待機中...")
