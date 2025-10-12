@@ -33,6 +33,21 @@ def download_video():
         messagebox.showerror("エラー", "保存先フォルダを選択してください")
         return
     
+    # withがなくても動作自体はするが、使うことにより処理が安全に終了する
+    try:
+        ydl_opts = {'quiet': True, 'no_warning': True, 'skip_dowaload': True}
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            title = info.get("title", "不明なタイトル")
+    except Exception as e:
+        messagebox.showerror("エラー", f"動画情報の取得に失敗しました\n{e}")
+        return
+    
+    confirm = messagebox.askyesno("確認", f"『{title}』をダウンロードしますか？")
+    if not confirm:
+        progress.set("キャンセルされました")
+        return
+    
     os.makedirs(folder, exist_ok=True)
 
     download_button.config(state="disabled")
