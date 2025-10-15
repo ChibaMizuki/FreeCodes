@@ -10,7 +10,7 @@ import threading
 # pyinstaller --noconsole --onefile main.py
 
 # キャンセル管理
-cancel_flag = False
+# cancel_flag = False
 
 # 保存フォルダを開く
 def select_folder():
@@ -20,8 +20,8 @@ def select_folder():
 
 # ダウンロードを開始する
 def download_video():
-    global cancel_flag
-    cancel_flag = False
+    # global cancel_flag
+    # cancel_flag = False
 
     url = url_entry.get()
     folder = save_path.get()
@@ -43,10 +43,11 @@ def download_video():
         messagebox.showerror("エラー", f"動画情報の取得に失敗しました\n{e}")
         return
     
-    confirm = messagebox.askyesno("確認", f"『{title}』をダウンロードしますか？")
-    if not confirm:
-        progress.set("キャンセルされました")
-        return
+    if title_confirm.get():
+        confirm = messagebox.askyesno("確認", f"『{title}』をダウンロードしますか？")
+        if not confirm:
+            progress.set("キャンセルされました")
+            return
     
     os.makedirs(folder, exist_ok=True)
 
@@ -70,10 +71,15 @@ def run_download(url, folder):
     # 'elapsed': 4.23,             # 経過時間（秒）
     # }
 
+    # key: 取り出したいキー名　default: キーがなかった時に返す値
+    # d.get('key', 'default') とすることにより、keyが存在しなかった場合（＝ KeyErrorが発生）に
+    # プログラムが終了しないようにしている（defaultを返す）
+
+    # ダウンロード状況の取得
     def progress_hook(d):
-        global cancel_flag
-        if cancel_flag:
-            raise yt_dlp.utils.DownloadError("ユーザーによるキャンセル")
+        # global cancel_flag
+        # if cancel_flag:
+        #     raise yt_dlp.utils.DownloadError("ユーザーによるキャンセル")
         if d['status'] == 'downloading':
             percent = d.get('_percent_str', '').strip()
             eta = d.get('_eta_str', '').strip()
@@ -81,10 +87,6 @@ def run_download(url, folder):
             progress.set(f"進行中: {percent} | 残り: {eta} | 速度: {speed}")
         elif d['status'] == 'finished':
             progress.set("変換中...")
-
-    # key: 取り出したいキー名　default: キーがなかった時に返す値
-    # d.get('key', 'default') とすることにより、keyが存在しなかった場合（＝ KeyErrorが発生）に
-    # プログラムが終了しないようにしている（defaultを返す）
 
     ydl_opts = {
         'format': 'mp4',
@@ -99,24 +101,18 @@ def run_download(url, folder):
             ydl.download([url])
         progress.set("ダウンロード完了")
         messagebox.showinfo("完了", "ダウンロードが完了しました")
-    except yt_dlp.utils.DownloadError as e:
-        if "キャンセル" in str(e):
-            progress.set("キャンセルしました")
-        else:
-            progress.set("エラー発生")
-            messagebox.showerror("エラー", f"ダウンロードに失敗しました\n{e}")
     except Exception as e:
         progress.set("エラー発生")
         messagebox.showerror("エラー", f"ダウンロードに失敗しました\n{e}")
     finally:
         download_button.config(state="normal")
-        cancel_button.config(state="disabled")
+        # cancel_button.config(state="disabled")
 
 # キャンセル処理
-def cancel_download():
-    global cancel_flag
-    cancel_flag = True
-    progress.set("キャンセル中...")
+# def cancel_download():
+#     global cancel_flag
+#     cancel_flag = True
+#     progress.set("キャンセル中...")
 
 # ウィンドウを閉じる
 def close():
@@ -159,22 +155,28 @@ button_frame = tk.Frame(root)
 button_frame.pack(pady=10)
 download_button = tk.Button(button_frame, text="ダウンロード", command=download_video)
 download_button.pack(side="left", padx=5)
-cancel_button = tk.Button(button_frame, text="キャンセル", command=cancel_download, state="disabled")
-cancel_button.pack(side="left", padx=5)
+
+# キャンセル
+# cancel_button = tk.Button(button_frame, text="キャンセル", command=cancel_download, state="disabled")
+# cancel_button.pack(side="left", padx=5)
 
 # チェックボックス
 confirm_frame = tk.Frame(root)
 confirm_frame.pack(pady=10)
 title_confirm = tk.BooleanVar(value=True)
-tc_button = tk.Checkbutton(root, text="ダウンロード前に確認ダイアログを表示する", variable=title_confirm)
+tc_button = tk.Checkbutton(confirm_frame, text="ダウンロード前に確認ダイアログを表示する", variable=title_confirm)
 tc_button.pack(side="left")
 
 # 進捗
+progress_frame = tk.Frame(root)
+progress_frame.pack(pady=10)
 progress = tk.StringVar()
 progress.set("待機中...")
-tk.Label(root, textvariable=progress, fg="blue").pack(pady=5)
+tk.Label(progress_frame, textvariable=progress, fg="blue").pack(pady=5)
 
 # 閉じるボタン
-tk.Button(root, text="終了", command=close).pack(pady=5)
+finish_frame = tk.Frame(root)
+finish_frame.pack(pady=10)
+tk.Button(finish_frame, text="終了", command=close).pack(padx=5)
 
 root.mainloop()
