@@ -126,6 +126,13 @@ def close():
 def clear_entry():
     url_entry.delete(0, tk.END)
 
+# ダウンロードフォルダの取得
+def get_user_download_folder():
+    user_folder = os.path.expanduser("~")
+    folder = os.path.join(user_folder, "Downloads")
+    
+    return folder
+
 
 root = tk.Tk()
 root.title("動画ダウンローダー")
@@ -136,7 +143,9 @@ url_entry = tk.Entry(root, width=60)
 url_entry.pack(padx=10, pady=5)
 tk.Button(root, text="URLクリア", command=clear_entry).pack(anchor="w", padx=10, pady=5)
 
-save_path = tk.StringVar()
+# StringVarはvalue=""で初期値を設定する
+init_save_path = get_user_download_folder()
+save_path = tk.StringVar(value=init_save_path)
 path_frame = tk.Frame(root)
 path_frame.pack(anchor="w", padx=10, pady=5)
 tk.Label(path_frame, text="保存先: ").pack(side="left")
