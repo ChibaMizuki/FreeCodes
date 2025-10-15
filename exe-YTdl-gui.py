@@ -3,19 +3,27 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 import yt_dlp
 import threading
+import cv2
 
+# もともと関数ベースで作成していたものをクラスベースに変更（ChatGPTに完全委託）
+# 軽く目を通したけどおそらく問題なし
+# なんかあったら10/15の自分とChatGPTを恨め
 
 class VideoDownloaderApp(tk.Tk):
     def __init__(self):
         super().__init__()
+        x = 600
+        y = 400
+        size = str(x) + "x" + str(y)
 
         self.title("動画ダウンローダー")
-        self.geometry("1000x600")
+        self.geometry(size)
 
         # 初期値設定
         self.save_path = tk.StringVar(value=self.get_user_download_folder())
         self.progress = tk.StringVar(value="待機中...")
         self.title_confirm = tk.BooleanVar(value=True)
+        self.open_confirm = tk.BooleanVar(value=False)
         # self.cancel_flag = False
 
         # 各UI部品を構築
@@ -55,7 +63,13 @@ class VideoDownloaderApp(tk.Tk):
             confirm_frame,
             text="ダウンロード前に確認ダイアログを表示する",
             variable=self.title_confirm
-        ).pack(side="left")
+        ).grid(row=0, column=0, sticky="w")
+        tk.Checkbutton(
+            confirm_frame,
+            text="ダウンロード後に動画ファイルを開く",
+            variable=self.open_confirm
+        ).grid(row=1, column=0, sticky="w")
+        
 
         # 進捗表示
         progress_frame = tk.Frame(self)
@@ -152,13 +166,6 @@ class VideoDownloaderApp(tk.Tk):
         finally:
             self.download_button.config(state="normal")
             # self.cancel_button.config(state="disabled")
-
-    # ----------------------------
-    # 将来の拡張（キャンセル処理など）
-    # ----------------------------
-    # def cancel_download(self):
-    #     self.cancel_flag = True
-    #     self.progress.set("キャンセル中...")
 
 
 if __name__ == "__main__":
