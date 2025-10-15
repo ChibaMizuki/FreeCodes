@@ -129,13 +129,15 @@ def clear_entry():
 
 root = tk.Tk()
 root.title("動画ダウンローダー")
-root.geometry("600x300")
+root.geometry("1000x600")
 
+# URL
 tk.Label(root, text="動画URL:").pack(anchor="w", padx=10, pady=5)
 url_entry = tk.Entry(root, width=60)
 url_entry.pack(padx=10, pady=5)
 tk.Button(root, text="URLクリア", command=clear_entry).pack(anchor="w", padx=10, pady=5)
 
+# 保存先
 save_path = tk.StringVar()
 path_frame = tk.Frame(root)
 path_frame.pack(anchor="w", padx=10, pady=5)
@@ -143,6 +145,7 @@ tk.Label(path_frame, text="保存先: ").pack(side="left")
 tk.Entry(path_frame, textvariable=save_path, width=45).pack(side="left", padx=5)
 tk.Button(path_frame, text="選択", command=select_folder).pack(side="left")
 
+# ダウンロード
 button_frame = tk.Frame(root)
 button_frame.pack(pady=10)
 download_button = tk.Button(button_frame, text="ダウンロード", command=download_video)
@@ -150,10 +153,19 @@ download_button.pack(side="left", padx=5)
 cancel_button = tk.Button(button_frame, text="キャンセル", command=cancel_download, state="disabled")
 cancel_button.pack(side="left", padx=5)
 
+# チェックボックス
+confirm_frame = tk.Frame(root)
+confirm_frame.pack(pady=10)
+title_confirm = tk.BooleanVar(value=True)
+tc_button = tk.Checkbutton(root, text="ダウンロード前に確認ダイアログを表示する", variable=title_confirm)
+tc_button.pack(side="left")
+
+# 進捗
 progress = tk.StringVar()
 progress.set("待機中...")
 tk.Label(root, textvariable=progress, fg="blue").pack(pady=5)
 
+# 閉じるボタン
 tk.Button(root, text="終了", command=close).pack(pady=5)
 
 root.mainloop()
