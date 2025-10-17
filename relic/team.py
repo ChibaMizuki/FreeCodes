@@ -1,3 +1,6 @@
+# メンバーをシャッフルしてチーム分けするコード
+# メンバー記入欄に追加されると新しい欄が動的に生成される
+# 100%ChatGPT製
 import tkinter as tk
 import random
 

@@ -1,3 +1,5 @@
+# HEICをJPG or PNG に変換するコード
+# 99%ChatGPT製
 import os
 from tkinter import Tk, filedialog
 from PIL import Image

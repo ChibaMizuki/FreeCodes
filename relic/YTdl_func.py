@@ -1,3 +1,4 @@
+# 関数ベースで開発してた
 import os
 import tkinter as tk
 from tkinter import filedialog, messagebox

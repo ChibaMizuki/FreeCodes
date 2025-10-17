@@ -1,3 +1,4 @@
+# コマンドプロンプトで実行させたやつ
 import subprocess
 import sys, os
 import tkinter as tk

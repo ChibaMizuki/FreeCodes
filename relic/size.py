@@ -1,3 +1,6 @@
+# 画像サイズを拡大縮小させるコード
+# ファイルサイズや拡張子を変えることが主な目的
+# 99%ChatGPT製
 import os
 from tkinter import filedialog, Tk, simpledialog, messagebox
 from PIL import Image
