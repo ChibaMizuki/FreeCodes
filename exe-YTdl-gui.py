@@ -1,3 +1,6 @@
+# exe化も含めてメインで開発することにしたやつ
+# クラスベース化して拡張性を持たせた
+# 名前の通り動画ダウンロードをGUI操作で行えるようにしてるもの
 import os
 import tkinter as tk
 from tkinter import filedialog, messagebox
