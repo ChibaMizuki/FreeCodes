@@ -28,6 +28,11 @@ class videoPlayer(tk.Tk):
 
         self.title("動画ダウンローダー")
         self.geometry(size)
+
+        self.open_video = False
+        self.is_dragging = False
+        self.is_updating = False
+
         self.set_widget()
 
     def set_widget(self):
@@ -35,37 +40,39 @@ class videoPlayer(tk.Tk):
         # メニューバー(ファイル)
         menu_bar = tk.Menu(self)
         self.config(menu=menu_bar)
-        
         file = tk.Menu(menu_bar, tearoff=False)
         menu_bar.add_cascade(label="file", menu=file)
-
-        # 動画ファイルを開く
+        # 動画ファイルを開く項目
         file.add_command(label="open file", command=self.open_file)
 
         # canvas
         self.canvas = tk.Canvas(self)
-        self.canvas.pack(side="top")
+        self.canvas.pack(side="top", fill="both", expand=True)
         
         # frame
         self.frame = tk.Frame(self)
-        self.frame.pack(side="top")
+        self.frame.pack(side="top", fill="x")
         
         # スライダー
-        self.value = 0
-        self.value_var = tk.StringVar(value="0")
-        time_scale = tk.Scale(
+        self.time_scale = tk.Scale(
             self.frame,
             length=self.x,
             orient=tk.HORIZONTAL,
             showvalue=False,
-            command=self.get_scale_value
+            command=self.on_scale_move # 動いたときに実行する
             )
-        time_scale.pack(side="top")
-        tk.Label(self.frame, textvariable=self.value_var).pack()
+        self.time_scale.pack(side="top", fill="x", padx=10)
+        self.time_label = tk.Label(self.frame, text="0 / 0")
+        self.time_label.pack()
         
         # 一時停止ボタン
-        pause_button = tk.Button(self.frame, text="pause", command=self.pause)
-        pause_button.pack(side="top")
+        self.pause_button = tk.Button(
+            self.frame,
+            text="play / pause", 
+            command=self.pause, 
+            state="disabled"
+        )
+        self.pause_button.pack(side="top")
         
 
         # ループ再生オンオフ
@@ -81,18 +88,58 @@ class videoPlayer(tk.Tk):
         media = instance.media_new(url)
         self.player.set_media(media)
         self.player.set_hwnd(self.canvas.winfo_id())
+        self.pause_button.config(state="normal")
         self.player.play()
+        self.open_video = True
+        self.after(500, self.init_duration) # ms後に関数を1度実行する
+    
+    # 動画の長さを取得してスライダー範囲設定
+    def init_duration(self):
+        if not self.open_video:
+            return
+        length = self.player.get_length()
+        if length > 0:
+            self.time_scale.config(to=length)
+            self.total_length = length
+            self.time_label.config(text=f"0 / {length // 1000}s")
+            if not self.is_updating:
+                self.is_updating = True 
+                self.update_slider() # 再生中のみ更新
+        else:
+            self.after(500, self.init_duration)
+        
+    # 定期的なスライダー更新（VLCの再生位置を取得）
+    def update_slider(self):
+        if self.open_video and not self.is_dragging:
+            current = self.player.get_time()
+            self.time_scale.set(current)
+            self.time_label.config(text=f"{current // 1000}s / {self.total_length // 1000}s")
+        
+        # 再生中のみ更新する
+        if self.open_video and self.player.is_playing():
+            self.after(2000, self.update_slider) # 再帰的に呼び出すことで永続的に実行する
+        else:
+            self.is_updating = False
+        
+
+    # スライダー操作時（ユーザーが移動中）
+    def on_scale_move(self, val):
+        if self.open_video:
+            self.is_dragging = True
+            self.player.set_time(int(float(val))) # なぜか知らないけどstrで戻ってくるらしい（ソースコードより）
+            self.after(300, self.reset_drag_flag)
+    
+    def reset_drag_flag(self):
+        self.is_dragging = False
 
     # ファイル選択をもとにVLC起動
     def open_file(self):
         file = filedialog.askopenfilename()
         if file:
             self.VLC(file)
-            
-    # スライダーの値を取得
-    def get_scale_value(self, value):
-        self.value = value
-        self.value_var.set(str(value))
+
+    def start(self):
+        self.player.play()
 
     # 一時停止
     def pause(self):
@@ -100,10 +147,12 @@ class videoPlayer(tk.Tk):
 
     # 終了
     def end(self):
-        try:
+        # 第1引数に第2引数が存在するか判定
+        if hasattr(self, 'player'):
             self.player.stop()
-        finally:
-            self.destroy()
+            print("stop")
+        self.destroy()
+        
 
 
 if __name__ == "__main__":
