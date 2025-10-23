@@ -33,6 +33,7 @@ class videoPlayer(tk.Tk):
 
         self.open_video = False
         self.is_dragging = False
+        self.slider_id = None
 
         self.set_widget()
 
@@ -46,7 +47,7 @@ class videoPlayer(tk.Tk):
         # 動画ファイルを開く項目
         file.add_command(label="open file", command=self.open_file)
         # なぜか分からないけどafterで遅延を挟まないとフリーズする
-        file.add_command(label="close file", command=lambda: self.after(50, self.release_video))
+        file.add_command(label="close file", command=lambda: self.after(100, self.release_video))
 
 
         # canvas
@@ -98,7 +99,6 @@ class videoPlayer(tk.Tk):
         self.open_video = True
         self.pause_button.config(state="normal")
         self.after(500, self.set_scale_range) # ms後に関数を1度実行する
-        self.release.config(state="normal")
     
     # 動画の長さを取得してスライダー範囲設定
     def set_scale_range(self):
@@ -136,7 +136,7 @@ class videoPlayer(tk.Tk):
                 self.value_var.set(f"{self.total_length // 1000} / {self.total_length // 1000}s")
 
         if self.open_video:
-            self.after(1000, self.update_slider)
+            self.slider_id = self.after(1000, self.update_slider)
 
     # ファイル選択をもとにVLC起動
     def open_file(self):
@@ -163,12 +163,15 @@ class videoPlayer(tk.Tk):
     def release_video(self):
         if self.open_video:
             self.open_video = False
+            if self.slider_id:
+                self.after_cancel(self.slider_id)
+                self.slider_id = None
             self.player.stop()
             self.player.release()
             self.player = None
             self.canvas.delete("all")
-            self.after(200, lambda: self.release.config(state="disabled"))
-        
+            self.time_scale.set(0)
+            self.value_var.set(value="0")
 
     # 終了
     def end(self):
