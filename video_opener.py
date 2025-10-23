@@ -2,9 +2,8 @@
 # tkinterのcanvasに描画する
 
 # 実装したい機能
-# シークバー
-# 動画を閉じる
-# 開かれた状態だとVLC本体が起動してしまう件の修正
+# シークバー（済）
+# 動画を閉じる（済）
 # 動画編集機能
 # ループ再生
 # 音量
@@ -27,6 +26,7 @@ class videoPlayer(tk.Tk):
         self.x = 600
         self.y = 500
         size = str(self.x) + "x" + str(self.y)
+        self.config(background="#202020")
 
         self.title("動画ダウンローダー")
         self.geometry(size)
@@ -42,20 +42,19 @@ class videoPlayer(tk.Tk):
         # メニューバー(ファイル)
         menu_bar = tk.Menu(self)
         self.config(menu=menu_bar)
-        file = tk.Menu(menu_bar, tearoff=False)
+        file = tk.Menu(menu_bar, tearoff=False, foreground="#202020")
         menu_bar.add_cascade(label="file", menu=file)
         # 動画ファイルを開く項目
         file.add_command(label="open file", command=self.open_file)
-        # なぜか分からないけどafterで遅延を挟まないとフリーズする
+        # なぜか分からないけどafterで遅延を挟まないとフリーズする（多分遅延が短くてもダメ）
         file.add_command(label="close file", command=lambda: self.after(100, self.release_video))
 
-
         # canvas
-        self.canvas = tk.Canvas(self)
+        self.canvas = tk.Canvas(self, background="#202020")
         self.canvas.pack(side="top", fill="both", expand=True)
         
         # frame
-        self.frame = tk.Frame(self)
+        self.frame = tk.Frame(self, background="#202020")
         self.frame.pack(side="top", fill="x")
         
         # スライダー
@@ -65,25 +64,24 @@ class videoPlayer(tk.Tk):
             length=self.x,
             orient=tk.HORIZONTAL,
             showvalue=False,
-            command=self.on_scale_move # 動かしたときに実行する
+            command=self.on_scale_move, # 動かしたときに実行する
+            background="#202020"
             )
         self.time_scale.pack(side="top", fill="x", padx=10)
-        tk.Label(self.frame, textvariable=self.value_var).pack()
+        tk.Label(self.frame, textvariable=self.value_var, background="#202020").pack()
         
         # 一時停止ボタン
         self.pause_button = tk.Button(
             self.frame,
             text="play / pause", 
             command=self.pause, 
-            state="disabled"
+            state="disabled",
+            background="#202020"
         )
         self.pause_button.pack(side="top")
-        
-
-        # ループ再生オンオフ
 
         # 終了ボタン
-        end_button = tk.Button(self, text="END", command=self.end)
+        end_button = tk.Button(self, text="END", command=self.end, background="#202020")
         end_button.pack(side="right")
     
     # VLCメディアプレイヤーの設定
@@ -180,7 +178,6 @@ class videoPlayer(tk.Tk):
             self.player.stop()
         self.destroy()
         
-
 
 if __name__ == "__main__":
     vlc_player = videoPlayer()
