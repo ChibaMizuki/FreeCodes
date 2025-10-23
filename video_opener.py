@@ -45,6 +45,9 @@ class videoPlayer(tk.Tk):
         menu_bar.add_cascade(label="file", menu=file)
         # 動画ファイルを開く項目
         file.add_command(label="open file", command=self.open_file)
+        # なぜか分からないけどafterで遅延を挟まないとフリーズする
+        file.add_command(label="close file", command=lambda: self.after(50, self.release_video))
+
 
         # canvas
         self.canvas = tk.Canvas(self)
@@ -84,6 +87,8 @@ class videoPlayer(tk.Tk):
     
     # VLCメディアプレイヤーの設定
     def VLC(self, url):
+        if self.open_video:
+            self.release_video()
         instance = vlc.Instance("--no-video-title-show")
         self.player = instance.media_player_new()
         media = instance.media_new(url)
@@ -93,6 +98,7 @@ class videoPlayer(tk.Tk):
         self.open_video = True
         self.pause_button.config(state="normal")
         self.after(500, self.set_scale_range) # ms後に関数を1度実行する
+        self.release.config(state="normal")
     
     # 動画の長さを取得してスライダー範囲設定
     def set_scale_range(self):
@@ -153,12 +159,21 @@ class videoPlayer(tk.Tk):
             self.player.set_time(0)
             self.time_scale.set(0)
             self.player.play()
+
+    def release_video(self):
+        if self.open_video:
+            self.open_video = False
+            self.player.stop()
+            self.player.release()
+            self.player = None
+            self.canvas.delete("all")
+            self.after(200, lambda: self.release.config(state="disabled"))
         
 
     # 終了
     def end(self):
         # 第1引数に第2引数が存在するか判定
-        if hasattr(self, 'player'):
+        if hasattr(self, 'player') and self.player != None:
             self.player.stop()
         self.destroy()
         
