@@ -46,8 +46,7 @@ class videoPlayer(tk.Tk):
         menu_bar.add_cascade(label="file", menu=file)
         # 動画ファイルを開く項目
         file.add_command(label="open file", command=self.open_file)
-        # なぜか分からないけどafterで遅延を挟まないとフリーズする（多分遅延が短くてもダメ）
-        file.add_command(label="close file", command=lambda: self.after(100, self.release_video))
+
 
         # canvas
         self.canvas = tk.Canvas(self, background="#202020")
@@ -81,8 +80,23 @@ class videoPlayer(tk.Tk):
         self.pause_button.pack(side="top")
 
         # 終了ボタン
-        end_button = tk.Button(self, text="END", command=self.end, background="#202020")
-        end_button.pack(side="right")
+        self.end_button = tk.Button(
+            self,
+            text="END",
+            command=self.end,
+            background="#202020"
+            )
+        self.end_button.pack(side="right")
+        
+        # 動画を閉じる
+        self.release_button = tk.Button(
+            self,
+            text="CLOSE",
+            command=self.release_video,
+            background="#202020",
+            state="disabled",
+            )
+        self.release_button.pack(side="right")
     
     # VLCメディアプレイヤーの設定
     def VLC(self, url):
@@ -96,6 +110,7 @@ class videoPlayer(tk.Tk):
         self.player.play()
         self.open_video = True
         self.pause_button.config(state="normal")
+        self.release_button.config(state="normal")
         self.after(500, self.set_scale_range) # ms後に関数を1度実行する
     
     # 動画の長さを取得してスライダー範囲設定
