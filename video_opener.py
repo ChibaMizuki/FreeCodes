@@ -9,7 +9,7 @@
 # 音量
 # yt-dlp機能
 # 別窓
-# ダークモード
+# ダークモード(済)
 # 動画サイズ、画面サイズ変更
 # 保存、出力機能
 # 
@@ -42,7 +42,7 @@ class videoPlayer(tk.Tk):
         # メニューバー(ファイル)
         menu_bar = tk.Menu(self)
         self.config(menu=menu_bar)
-        file = tk.Menu(menu_bar, tearoff=False, foreground="#202020")
+        file = tk.Menu(menu_bar, tearoff=False)
         menu_bar.add_cascade(label="file", menu=file)
         # 動画ファイルを開く項目
         file.add_command(label="open file", command=self.open_file)
@@ -64,10 +64,11 @@ class videoPlayer(tk.Tk):
             orient=tk.HORIZONTAL,
             showvalue=False,
             command=self.on_scale_move, # 動かしたときに実行する
-            background="#202020"
+            background="#202020",
+            foreground="#e0e0e0"
             )
         self.time_scale.pack(side="top", fill="x", padx=10)
-        tk.Label(self.frame, textvariable=self.value_var, background="#202020").pack()
+        tk.Label(self.frame, textvariable=self.value_var, background="#202020", foreground="#e0e0e0").pack()
         
         # 一時停止ボタン
         self.pause_button = tk.Button(
@@ -75,7 +76,8 @@ class videoPlayer(tk.Tk):
             text="play / pause", 
             command=self.pause, 
             state="disabled",
-            background="#202020"
+            background="#202020",
+            foreground="#e0e0e0"
         )
         self.pause_button.pack(side="top")
 
@@ -84,7 +86,8 @@ class videoPlayer(tk.Tk):
             self,
             text="END",
             command=self.end,
-            background="#202020"
+            background="#202020",
+            foreground="#e0e0e0"
             )
         self.end_button.pack(side="right")
         
@@ -94,6 +97,7 @@ class videoPlayer(tk.Tk):
             text="CLOSE",
             command=self.release_video,
             background="#202020",
+            foreground="#e0e0e0",
             state="disabled",
             )
         self.release_button.pack(side="right")
