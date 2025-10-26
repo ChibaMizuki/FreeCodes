@@ -6,7 +6,7 @@
 # 動画を閉じる（済）
 # 動画編集機能
 # ループ再生
-# 音量
+# 音量（済）
 # yt-dlp機能
 # 別窓
 # ダークモード(済)
@@ -34,6 +34,7 @@ class videoPlayer(tk.Tk):
         self.open_video = False
         self.is_dragging = False
         self.slider_id = None
+        self.set_mute = tk.BooleanVar(value=False)
 
         self.set_widget()
 
@@ -70,6 +71,18 @@ class videoPlayer(tk.Tk):
         self.time_scale.pack(side="top", fill="x", padx=10)
         tk.Label(self.frame, textvariable=self.value_var, background="#202020", foreground="#e0e0e0").pack()
         
+        # 音量
+        self.audio_scale = tk.Scale(
+            self.frame,
+            length=100,
+            to=100,
+            orient=tk.HORIZONTAL,
+            command=self.audio,
+            background="#202020",
+            foreground="#e0e0e0"
+        )
+        self.audio_scale.pack(side="left")
+        
         # 一時停止ボタン
         self.pause_button = tk.Button(
             self.frame,
@@ -80,6 +93,10 @@ class videoPlayer(tk.Tk):
             foreground="#e0e0e0"
         )
         self.pause_button.pack(side="top")
+        
+        # ミュートボタン
+        self.mute = tk.Checkbutton(self.frame, text="mute", command=self.mute_video, background="#202020", foreground="#e0e0e0")
+        self.mute.pack(side="left")
 
         # 終了ボタン
         self.end_button = tk.Button(
@@ -115,6 +132,7 @@ class videoPlayer(tk.Tk):
         self.open_video = True
         self.pause_button.config(state="normal")
         self.release_button.config(state="normal")
+        self.after(500, lambda: self.player.audio_set_volume(int(self.audio_scale.get())))
         self.after(500, self.set_scale_range) # ms後に関数を1度実行する
     
     # 動画の長さを取得してスライダー範囲設定
@@ -177,6 +195,7 @@ class videoPlayer(tk.Tk):
             self.time_scale.set(0)
             self.player.play()
 
+    # 動画を閉じる
     def release_video(self):
         if self.open_video:
             self.open_video = False
@@ -189,6 +208,15 @@ class videoPlayer(tk.Tk):
             self.canvas.delete("all")
             self.time_scale.set(0)
             self.value_var.set(value="0")
+    
+    # 音量
+    def audio(self, value):
+        if self.open_video:
+            self.player.audio_set_volume(int(float(value)))
+    
+    # ミュート
+    def mute_video(self):
+        self.player.audio_toggle_mute()
 
     # 終了
     def end(self):
