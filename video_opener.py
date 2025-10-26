@@ -10,7 +10,7 @@
 # yt-dlp機能
 # 別窓
 # ダークモード(済)
-# 動画サイズ、画面サイズ変更
+# 動画サイズ、画面サイズ変更（済）
 # 保存、出力機能
 # 
 
@@ -43,10 +43,20 @@ class videoPlayer(tk.Tk):
         # メニューバー(ファイル)
         menu_bar = tk.Menu(self)
         self.config(menu=menu_bar)
+        
         file = tk.Menu(menu_bar, tearoff=False)
-        menu_bar.add_cascade(label="file", menu=file)
+        window = tk.Menu(menu_bar, tearoff=False)
+        size = tk.Menu(window, tearoff=False)
+        
         # 動画ファイルを開く項目
-        file.add_command(label="open file", command=self.open_file)
+        menu_bar.add_cascade(label="file", menu=file) # メニューバーに追加
+        file.add_command(label="open file", command=self.open_file) # 選択肢の追加
+        # ウィンドウサイズ
+        menu_bar.add_cascade(label="window", menu=window) # メニューバーに追加
+        window.add_cascade(label="resize", menu=size) # 選択肢付き選択肢を追加
+        size.add_cascade(label="set", command=self.set_window_size)
+        size.add_cascade(label="1280x720", command=lambda: self.geometry("1280x720"))
+        size.add_cascade(label="1440x900", command=lambda: self.geometry("1440x900"))
 
 
         # canvas
@@ -217,6 +227,32 @@ class videoPlayer(tk.Tk):
     # ミュート
     def mute_video(self):
         self.player.audio_toggle_mute()
+        
+    # リサイズ
+    def set_window_size(self):
+        self.winsize_input_window = tk.Toplevel()
+        self.winsize_input_window.geometry("300x300")
+        label = tk.Label(self.winsize_input_window, text="resize")
+        label.pack()
+        
+        x_label = tk.Label(self.winsize_input_window, text="x: ")
+        x_label.pack()
+        entry_x = tk.Entry(self.winsize_input_window)
+        entry_x.pack()
+        y_label = tk.Label(self.winsize_input_window, text="y: ")
+        y_label.pack()
+        entry_y = tk.Entry(self.winsize_input_window)
+        entry_y.pack()
+        
+        def apply_user_settings():
+            x = entry_x.get()
+            y = entry_y.get()
+            if int(x) and int(y):
+                self.geometry(f"{x}x{y}")
+                self.winsize_input_window.destroy()
+            
+        apply_button = tk.Button(self.winsize_input_window, command=apply_user_settings, text="apply")
+        apply_button.pack()
 
     # 終了
     def end(self):
