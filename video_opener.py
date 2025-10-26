@@ -16,7 +16,7 @@
 
 import vlc
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 import cv2
 import time
 
@@ -247,9 +247,11 @@ class videoPlayer(tk.Tk):
         def apply_user_settings():
             x = entry_x.get()
             y = entry_y.get()
-            if int(x) and int(y):
-                self.geometry(f"{x}x{y}")
+            try:
+                self.geometry(f"{int(x)}x{int(y)}")
                 self.winsize_input_window.destroy()
+            except ValueError as e:
+                messagebox.showerror("eroor", "please input integer value")
             
         apply_button = tk.Button(self.winsize_input_window, command=apply_user_settings, text="apply")
         apply_button.pack()
