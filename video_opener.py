@@ -309,6 +309,12 @@ class DL(tk.Toplevel):
         # 各UI部品を構築
         self.create_widgets()
 
+        # 処理を止めるから末尾に書く必要があるっぽい？
+        self.transient(master)  # メインウィンドウの手前に表示
+        self.grab_set()         # メインを操作不可に
+        self.focus_set()        # サブにフォーカスを与える
+        self.wait_window(self)  # このウィンドウが閉じられるまで待機
+
     # UI
     def create_widgets(self):
         # URL入力欄
