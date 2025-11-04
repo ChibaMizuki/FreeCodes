@@ -440,6 +440,7 @@ class DL(tk.Toplevel):
             'progress_hooks': [progress_hook],
             'quiet': True,
             'no_warning': True,
+            'max_downloads' : 1,
         }
 
         try:
