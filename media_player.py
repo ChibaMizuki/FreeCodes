@@ -12,7 +12,7 @@
 # ダークモード(済)
 # 動画サイズ、画面サイズ変更（済）
 # 保存、出力機能
-# プレイリスト等のダウンロードを制限する機能
+# 
 
 import vlc
 import tkinter as tk
@@ -440,7 +440,6 @@ class DL(tk.Toplevel):
             'progress_hooks': [progress_hook],
             'quiet': True,
             'no_warning': True,
-            'max_downloads' : 1,
         }
 
         try:
@@ -449,10 +448,11 @@ class DL(tk.Toplevel):
             self.after(0, lambda: self.progress.set("ダウンロード完了")) # UI変更はメインウィンドウで実行
             self.after(0, lambda: messagebox.showinfo("完了", "ダウンロードが完了しました"))
             if self.open_confirm.get():
-                self.after(0, lambda: send_path(dl_path))
+                self.after(0, lambda path=dl_path: send_path(path))
         except Exception as e:
+            err_str = str(e)
             self.after(0, lambda: self.progress.set("エラー発生"))
-            self.after(0, lambda: messagebox.showerror("エラー", f"ダウンロードに失敗しました\n{e}"))
+            self.after(0, lambda msg=err_str: messagebox.showerror("エラー", f"ダウンロードに失敗しました\n{msg}"))
         finally:
             self.after(0, lambda: self.download_button.config(state="normal"))
 
