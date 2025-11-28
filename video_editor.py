@@ -1,3 +1,12 @@
+# 動画編集
+
+# 実装項目
+# タイムライン
+# 出力
+# 編集画面
+# 編集機能
+# 動画複数連続再生
+
 import tkinter as tk
 from tkinter import filedialog
 import vlc
@@ -27,10 +36,20 @@ class Editor(tk.Tk):
     # ---------------------------
     def set_widget(self):
         # メニューバー
+        # 1. バーの作成
         menu = tk.Menu(self)
+        
+        # 2. バーに追加する枠の作成
         file_menu = tk.Menu(menu, tearoff=0)
+        # 3. 枠の中身を作成
         file_menu.add_command(label="open", command=self.open_file_dialog)
+        # 4. 枠をバーに追加
         menu.add_cascade(label="file", menu=file_menu)
+        
+        edit_menu = tk.Menu(menu, tearoff=0)
+        edit_menu.add_command(label="open editor")
+        menu.add_cascade(label="edit", menu=edit_menu)
+        
         self.config(menu=menu)
 
         # 動画キャンバス

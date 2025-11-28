@@ -11,8 +11,6 @@
 # 別窓（済）
 # ダークモード(済)
 # 動画サイズ、画面サイズ変更（済）
-# 保存、出力機能
-# 
 
 import vlc
 import tkinter as tk
@@ -45,6 +43,12 @@ class videoPlayer(tk.Tk):
     def set_widget(self):
         # pack, grid, placeは同じコンテナで混在不可
         # メニューバー(ファイル)
+        # 1. バーに枠を作成(tk.Menu)
+        # 2. 枠の中身を作成(add_command)
+        # 3. 枠の中身と上位の名称をアタッチ(add_cascade)
+        
+        # 選択肢付き選択肢
+        # 中身が枠になる(add_cascadeにadd_cascadeをアタッチ)
         menu_bar = tk.Menu(self)
         self.config(menu=menu_bar)
         
@@ -59,9 +63,9 @@ class videoPlayer(tk.Tk):
         # ウィンドウサイズ
         menu_bar.add_cascade(label="window", menu=window) # メニューバーに追加
         window.add_cascade(label="resize", menu=size) # 選択肢付き選択肢を追加
-        size.add_cascade(label="set", command=self.set_window_size)
-        size.add_cascade(label="1280x720", command=lambda: self.geometry("1280x720"))
-        size.add_cascade(label="1440x900", command=lambda: self.geometry("1440x900"))
+        size.add_command(label="set", command=self.set_window_size)
+        size.add_command(label="1280x720", command=lambda: self.geometry("1280x720"))
+        size.add_command(label="1440x900", command=lambda: self.geometry("1440x900"))
         # ダウンロード
         menu_bar.add_cascade(label="download", menu=download)
         download.add_command(label="download", command=lambda: DL(self))
@@ -275,7 +279,7 @@ class videoPlayer(tk.Tk):
             y = entry_y.get()
             try:
                 self.geometry(f"{int(x)}x{int(y)}")
-                self.winsize_input_window.destroy()
+                winsize_input_window.destroy()
             except ValueError as e:
                 messagebox.showerror("eroor", "please input integer value")
             
