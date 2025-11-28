@@ -8,12 +8,17 @@ import time
 class Editor(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.geometry("800x600")
+        self.x = 1000
+        y = 800
+        self.geometry(f"{self.x}x{y}")
         self.title("動画編集")
 
         self.player = None
         self.media = None
         self.duration = 0   # 秒
+        
+        self.timeline_scale = 20  # 1秒あたり20px
+        self.timeline_cursor = None  # 現在位置の赤線
 
         self.set_widget()
 
@@ -30,7 +35,7 @@ class Editor(tk.Tk):
 
         # 動画キャンバス
         self.canvas = tk.Canvas(self, bg="black", width=800, height=450)
-        self.canvas.pack()
+        self.canvas.pack(expand=True, fill=tk.BOTH)
 
         # 再生ボタン
         self.play_button = tk.Button(self, text="play", command=self.start_stop)
@@ -47,7 +52,21 @@ class Editor(tk.Tk):
             command=self.on_slider_change,
             showvalue=True
         )
-        self.slider.pack()
+        self.slider.pack(fill="x", expand=True)
+    
+        # ---------------------------
+        # タイムライン Canvas
+        # ---------------------------
+        frame = tk.Frame(self)
+        frame.pack(fill="x")
+        
+        self.timeline_canvas = tk.Canvas(frame, bg="#222", height=80, scrollregion=(0, 0, 2000, 80))
+        # 横スクロールバー
+        scrollbar = tk.Scrollbar(frame, orient="horizontal", command=self.timeline_canvas.xview)
+        scrollbar.pack(fill="x")
+        self.timeline_canvas.pack(fill="x", expand=True)
+        
+        self.timeline_canvas.configure(xscrollcommand=scrollbar.set)
 
     # ---------------------------
     # 動画ファイル選択
@@ -78,7 +97,7 @@ class Editor(tk.Tk):
 
         # 再生して duration を取得
         self.player.play()
-        self.after(50, lambda: self.player.pause())
+        self.after(50, lambda: self.player.stop())
 
         def load_duration():
             time.sleep(0.3)
@@ -90,11 +109,32 @@ class Editor(tk.Tk):
             self.duration = dur
             # スライダーを動画時間に合わせる
             self.slider.config(from_=0, to=dur)
+            
+            self.create_timeline()
 
         threading.Thread(target=load_duration, daemon=True).start()
 
         # Ended 状態監視
         self.check_end()
+        
+    def create_timeline(self):
+        self.timeline_canvas.delete("all")
+        
+        width = int(self.duration * self.timeline_scale)
+        if width < self.x:
+            width = self.x
+            
+        self.timeline_canvas.config(scrollregion=(0, 0, width, 80))
+        
+        self.timeline_canvas.create_rectangle(0, 20, width, 60, fill="#333", outline="")
+        
+        for sec in range(int(self.duration) + 1):
+            x = sec * self.timeline_scale
+            self.timeline_canvas.create_line(x, 20, x, 10, fill="white")
+            self.timeline_canvas.create_text(x + 2, 5, text=str(sec), anchor="w", fill="white")
+            
+        self.timeline_cursor = self.timeline_canvas.create_line(0, 0, 0, 80, fill="red", width=2)
+        
 
     # ---------------------------
     # Ended 状態監視
@@ -124,6 +164,10 @@ class Editor(tk.Tk):
             sec = self.duration - 0.02
 
         self.player.set_time(int(sec * 1000))
+        
+        if self.timeline_cursor:
+            x = sec * self.timeline_scale
+            self.timeline_canvas.coords(self.timeline_cursor, x, 0, x, 80)
 
     # ---------------------------
     # 再生・停止ボタン
