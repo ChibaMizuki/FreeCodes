@@ -116,7 +116,7 @@ class Editor(tk.Tk):
 
         # 再生して duration を取得
         self.player.play()
-        self.after(50, lambda: self.player.stop())
+        self.after(50, lambda: self.player.pause())
 
         def load_duration():
             time.sleep(0.3)
@@ -165,8 +165,9 @@ class Editor(tk.Tk):
                 self.player.stop()
                 self.player.set_media(self.media)
                 self.player.play()
-                self.player.set_time(0)
-                self.slider.set(0)
+                self.after(50, self.player.set_time(int(self.duration - 1)))
+                self.after(50, lambda: self.player.pause())
+                
 
         self.after(200, self.check_end)
 
