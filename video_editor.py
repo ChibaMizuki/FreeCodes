@@ -14,7 +14,7 @@ import threading
 import time
 
 
-class Editor(tk.Tk):
+class Player(tk.Tk):
     def __init__(self):
         super().__init__()
         self.x = 1000
@@ -47,7 +47,7 @@ class Editor(tk.Tk):
         menu.add_cascade(label="file", menu=file_menu)
         
         edit_menu = tk.Menu(menu, tearoff=0)
-        edit_menu.add_command(label="open editor")
+        edit_menu.add_command(label="open editor", command=lambda: Editor())
         menu.add_cascade(label="edit", menu=edit_menu)
         
         self.config(menu=menu)
@@ -95,6 +95,7 @@ class Editor(tk.Tk):
             filetypes=[("動画ファイル", "*.mp4 *.mov *.avi *.mkv")]
         )
         if path:
+            print(path)
             self.open_video(path)
 
     # ---------------------------
@@ -217,6 +218,11 @@ class Editor(tk.Tk):
             self.player.play()
 
 
+class Editor(tk.Toplevel):
+    def __init__(self, master=None):
+        super().__init__(master)
+        self.geometry("600x1000")
+
 if __name__ == "__main__":
-    app = Editor()
+    app = Player()
     app.mainloop()
