@@ -1,0 +1,1 @@
+# media_player.pyをpyside6に移植
