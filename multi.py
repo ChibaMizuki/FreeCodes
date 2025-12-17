@@ -95,17 +95,22 @@ class VideoPlayer(QMainWindow):
         self.timer = QTimer()
         self.timer.setInterval(500) # 0.5秒ごとにスライダー更新
         self.timer.timeout.connect(self.update_slider)
+
+        self.end_check_timer = QTimer()
+        self.end_check_timer.setInterval(100)
+        self.end_check_timer.timeout.connect(self.end_check)
         
     # 動画表示
     def open_file(self):
         filename, _ = QFileDialog.getOpenFileName(self, "動画を選択")
         if filename:
-            media = self.instance.media_new(filename)
-            self.player.set_media(media)
+            self.media = self.instance.media_new(filename)
+            self.player.set_media(self.media)
             self.player.set_hwnd(self.video_frame.winId())
             self.volume.setValue(50)
             self.player.play()
             self.timer.start()
+            self.end_check_timer.start()
             self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
             self.slider.setValue(0)
 
@@ -140,7 +145,6 @@ class VideoPlayer(QMainWindow):
     
     def slider_press(self):
         self.timer.stop()
-        self.player.pause()
 
     def slider_move(self, value):
         if self.player.get_length() > 0:
@@ -150,9 +154,17 @@ class VideoPlayer(QMainWindow):
     
     def slider_release(self):
         value = self.slider.value() / 1000
+        if value >= 1:
+            value = 0.99 # 終了判定を巻き込まないために
         self.player.set_position(value)
-        self.player.play()
         self.timer.start()
+
+    def end_check(self):
+        if self.player.get_state() == vlc.State.Ended:
+            self.player.set_media(self.media)
+            self.player.set_position(0)
+            self.slider.setValue(0)
+            self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
 
 
 if __name__ == "__main__":
