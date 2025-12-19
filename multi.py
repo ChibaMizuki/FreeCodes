@@ -4,7 +4,6 @@ import vlc
 import yt_dlp
 import os
 import sys
-import threading
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -19,15 +18,25 @@ from PySide6.QtWidgets import (
     QSlider,
     QMenuBar,
     QFileDialog,
+    QLineEdit,
+    QDialog,    
 )
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import (
+    Qt,
+    QTimer,
+    Signal,
+    Slot,
+    QThread,
+)
 
 
-class VideoPlayer(QMainWindow):
+class videoPlayer(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("PySide6 VLC Player")
         self.setGeometry(200, 200, 1000, 700)
+        self.dl_window = downloadWindow(self)
+        self.dl_window.hide()
 
         # VLC初期化
         self.instance = vlc.Instance()
@@ -49,6 +58,7 @@ class VideoPlayer(QMainWindow):
         file_open.triggered.connect(self.open_file)
         dl = menu_bar.addMenu("yt_dlp")
         download = dl.addAction("download")
+        download.triggered.connect(self.show_dl_window)
         self.setMenuBar(menu_bar)
         
         # 再生ボタン
@@ -72,7 +82,7 @@ class VideoPlayer(QMainWindow):
         self.volume.setValue(50)
         self.volume.valueChanged.connect(self.set_volum)
 
-        # yt_dlp
+
         # 画面サイズ
 
         # レイアウト合体
@@ -165,10 +175,110 @@ class VideoPlayer(QMainWindow):
             self.player.set_position(0)
             self.slider.setValue(0)
             self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+    
+    def show_dl_window(self):
+        self.dl_window.show()
+
+    def closeEvent(self, event):
+        self.dl_window.close()
+
+
+class downloadWindow(QDialog):
+    send_url = Signal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setGeometry(600, 600, 600, 400)
+        self.setWindowTitle("Download")
+
+        layout = QVBoxLayout(self)
+
+        # URL入力欄
+        input_video_url = QHBoxLayout()
+
+        url_label = QLabel("URL: ")
+        input_video_url.addWidget(url_label)
+
+        self.video_url = QLineEdit()
+        input_video_url.addSpacing(10)
+        input_video_url.addWidget(self.video_url)
+        input_video_url.addSpacing(10)
+
+        clear_button = QPushButton("clear")
+        clear_button.setMaximumWidth(80)
+        clear_button.clicked.connect(self.clear_url)
+
+        # 保存先設定
+        input_save_path = QHBoxLayout()
+
+        path_label = QLabel("PATH")
+        input_save_path.addWidget(path_label)
+
+        # 内部でパス保持する方の変数
+        self.folder_path = self.get_user_download_folder()
+        # パスを表示する方の変数
+        self.dl_path = QLineEdit(self.folder_path)
+        self.dl_path.setReadOnly(True)
+        input_save_path.addSpacing(10)
+        input_save_path.addWidget(self.dl_path)
+        input_save_path.addSpacing(10)
+
+        select_button = QPushButton("select")
+        select_button.clicked.connect(self.select_folder)
+        input_save_path.addWidget(select_button)
+        input_save_path.addSpacing(10)
+
+        # ダウンロードボタン
+        dl_button = QPushButton("download")
+        dl_button.clicked.connect(self.download)
+
+        # 確認チェックボックス
+
+        # 進捗表示
+        self.progress = QLabel("waiting")
+        self.progress.setAlignment(Qt.AlignCenter)
+
+        # レイアウト合体
+        layout.addSpacing(20)
+        layout.addLayout(input_video_url)
+        layout.addSpacing(20)
+        layout.addWidget(clear_button)
+        layout.addSpacing(20)
+        layout.addLayout(input_save_path)
+        layout.addStretch()
+        layout.addWidget(self.progress)
+        layout.addStretch()
+        layout.addWidget(dl_button)
+
+    def clear_url(self):
+        self.video_url.clear()
+
+    @staticmethod
+    def get_user_download_folder():
+        user_folder = os.path.expanduser("~")
+        return os.path.join(user_folder, "Downloads")
+    
+    def select_folder(self):
+        foldername = QFileDialog.getExistingDirectory(self, "select folder")
+        if foldername:
+            self.folder_path = foldername
+            self.dl_path.setText(foldername)
+
+    def download(self):
+        if not self.video_url.text():
+            QMessageBox.warning(self, "error", "Please Input URL")
+        if not self.folder_path:
+            QMessageBox.warning(self, "error", "Please Input Folder Path")
+        
+        os.makedirs(self.folder_path, exist_ok=True)
+
+class downloadThread(QThread):
+    def run(self):
+        return super().run()
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    player = VideoPlayer()
+    player = videoPlayer()
     player.show()
     sys.exit(app.exec())
