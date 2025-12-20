@@ -184,7 +184,8 @@ class videoPlayer(QMainWindow):
 
 
 class downloadWindow(QDialog):
-    send_url = Signal(str)
+    success = Signal()
+    error = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -272,7 +273,7 @@ class downloadWindow(QDialog):
         
         os.makedirs(self.folder_path, exist_ok=True)
         
-        self.download_process = downloadThread(self, self.video_url, self.folder_path)
+        self.download_process = downloadThread(self, self.video_url.text(), self.folder_path)
         self.download_process.start()
 
 class downloadThread(QThread):
@@ -295,8 +296,9 @@ class downloadThread(QThread):
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([self.url])
             QMessageBox.information(self, "success", "Finish Download")
-        except Exception:
-            QMessageBox.warning(self.dl_window, "error", f"Failed to Download")
+        except Exception as e:
+            QMessageBox.warning(self.dl_window, "error", f"Failed to Download\n{e}")
+            # expected string or bytes-like object, got 'PySide6.QtWidgets.QLineEdit'
 
 
 if __name__ == "__main__":
