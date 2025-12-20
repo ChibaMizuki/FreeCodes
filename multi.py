@@ -271,10 +271,32 @@ class downloadWindow(QDialog):
             QMessageBox.warning(self, "error", "Please Input Folder Path")
         
         os.makedirs(self.folder_path, exist_ok=True)
+        
+        self.download_process = downloadThread(self, self.video_url, self.folder_path)
+        self.download_process.start()
 
 class downloadThread(QThread):
+    def __init__(self, dl_window ,url, folder):
+        super().__init__()
+        self.dl_window = dl_window
+        self.url = url
+        self.folder = folder
+    
     def run(self):
-        return super().run()
+        ydl_opts = {
+            'format': 'mp4',
+            'outtmpl': os.path.join(self.folder, '%(title)s.%(ext)s'),
+            # 'progress_hooks': [progress_hook],
+            'quiet': True,
+            'no_warning': True,
+        }
+        
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([self.url])
+            QMessageBox.information(self, "success", "Finish Download")
+        except Exception:
+            QMessageBox.warning(self.dl_window, "error", f"Failed to Download")
 
 
 if __name__ == "__main__":
