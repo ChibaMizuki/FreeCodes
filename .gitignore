@@ -209,4 +209,5 @@ __marimo__/
 video/
 test.py
 practice.py
+yt-dlp_test.py
 test/
