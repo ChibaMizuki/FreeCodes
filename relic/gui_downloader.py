@@ -151,6 +151,7 @@ class VideoDownloaderApp(tk.Tk):
                 self.progress.set("変換中...")
 
         ydl_opts = {
+            'remote_components': ['ejs:github'],
             'format': 'mp4',
             'outtmpl': os.path.join(folder, '%(title)s.%(ext)s'),
             'progress_hooks': [progress_hook],
