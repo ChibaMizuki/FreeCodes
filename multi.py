@@ -19,13 +19,14 @@ from PySide6.QtWidgets import (
     QMenuBar,
     QFileDialog,
     QLineEdit,
-    QDialog,    
+    QDialog,
+    QProgressBar,
+    QCheckBox,
 )
 from PySide6.QtCore import (
     Qt,
     QTimer,
     Signal,
-    Slot,
     QThread,
 )
 
@@ -34,9 +35,10 @@ class videoPlayer(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("PySide6 VLC Player")
-        self.setGeometry(200, 200, 1000, 700)
+        self.resize(1000, 700)
         self.dl_window = downloadWindow(self)
         self.dl_window.hide()
+        self.dl_window.video.connect(self.open_file)
 
         # VLC初期化
         self.instance = vlc.Instance()
@@ -91,15 +93,15 @@ class videoPlayer(QMainWindow):
         layout.addWidget(self.video_frame)
         
         # ボタン類を水平分割
-        control = QHBoxLayout()
-        control.addWidget(self.play_button)
-        control.addWidget(self.time_label)
-        control.addWidget(self.slider)
-        control.addWidget(QLabel("vol"))
-        control.addWidget(self.volume)
+        control_layout = QHBoxLayout()
+        control_layout.addWidget(self.play_button)
+        control_layout.addWidget(self.time_label)
+        control_layout.addWidget(self.slider)
+        control_layout.addWidget(QLabel("vol"))
+        control_layout.addWidget(self.volume)
         
         # レイアウトをまとめて追加
-        layout.addLayout(control)
+        layout.addLayout(control_layout)
 
         # UI更新の時間設定
         self.timer = QTimer()
@@ -111,8 +113,14 @@ class videoPlayer(QMainWindow):
         self.end_check_timer.timeout.connect(self.end_check)
         
     # 動画表示
-    def open_file(self):
-        filename, _ = QFileDialog.getOpenFileName(self, "動画を選択")
+    def open_file(self, fn):
+        print(f"filename at open_file: {fn}")
+        if not fn:
+            filename, _ = QFileDialog.getOpenFileName(self, "動画を選択")
+        else:
+            filename = str(os.path.abspath(fn))
+            print(f"filename (abspath): {filename}")
+
         if filename:
             self.media = self.instance.media_new(filename)
             self.player.set_media(self.media)
@@ -186,68 +194,84 @@ class videoPlayer(QMainWindow):
 class downloadWindow(QDialog):
     success = Signal()
     error = Signal(str)
+    video = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setGeometry(600, 600, 600, 400)
+        self.resize(600, 400)
         self.setWindowTitle("Download")
 
         layout = QVBoxLayout(self)
 
         # URL入力欄
-        input_video_url = QHBoxLayout()
+        video_url_layout = QHBoxLayout()
 
         url_label = QLabel("URL: ")
-        input_video_url.addWidget(url_label)
+        video_url_layout.addWidget(url_label)
 
         self.video_url = QLineEdit()
-        input_video_url.addSpacing(10)
-        input_video_url.addWidget(self.video_url)
-        input_video_url.addSpacing(10)
+        video_url_layout.addSpacing(10)
+        video_url_layout.addWidget(self.video_url)
+        video_url_layout.addSpacing(10)
 
         clear_button = QPushButton("clear")
         clear_button.setMaximumWidth(80)
         clear_button.clicked.connect(self.clear_url)
 
         # 保存先設定
-        input_save_path = QHBoxLayout()
+        save_path_layout = QHBoxLayout()
 
         path_label = QLabel("PATH")
-        input_save_path.addWidget(path_label)
+        save_path_layout.addWidget(path_label)
 
         # 内部でパス保持する方の変数
         self.folder_path = self.get_user_download_folder()
         # パスを表示する方の変数
         self.dl_path = QLineEdit(self.folder_path)
         self.dl_path.setReadOnly(True)
-        input_save_path.addSpacing(10)
-        input_save_path.addWidget(self.dl_path)
-        input_save_path.addSpacing(10)
+        save_path_layout.addSpacing(10)
+        save_path_layout.addWidget(self.dl_path)
+        save_path_layout.addSpacing(10)
 
         select_button = QPushButton("select")
         select_button.clicked.connect(self.select_folder)
-        input_save_path.addWidget(select_button)
-        input_save_path.addSpacing(10)
+        save_path_layout.addWidget(select_button)
+        save_path_layout.addSpacing(10)
 
         # ダウンロードボタン
         dl_button = QPushButton("download")
         dl_button.clicked.connect(self.download)
 
         # 確認チェックボックス
+        self.open_after_download = QCheckBox("Open The Video File After Downloading")
 
         # 進捗表示
-        self.progress = QLabel("waiting")
-        self.progress.setAlignment(Qt.AlignCenter)
+        progress_layout = QVBoxLayout()
+
+        self.progress_status = QLabel("Waiting")
+        self.progress_status.setAlignment(Qt.AlignCenter)
+        self.progress_text = QLabel("Download Status")
+        self.progress_text.setAlignment(Qt.AlignCenter)
+        progress_layout.addWidget(self.progress_text)
+        progress_layout.addWidget(self.progress_status)
+
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setMinimum(0)
+        self.progress_bar.setMaximum(100)
+        self.progress_bar.setValue(0)
+        progress_layout.addWidget(self.progress_bar)
 
         # レイアウト合体
         layout.addSpacing(20)
-        layout.addLayout(input_video_url)
+        layout.addLayout(video_url_layout)
         layout.addSpacing(20)
         layout.addWidget(clear_button)
         layout.addSpacing(20)
-        layout.addLayout(input_save_path)
+        layout.addLayout(save_path_layout)
         layout.addStretch()
-        layout.addWidget(self.progress)
+        layout.addWidget(self.open_after_download)
+        layout.addStretch()
+        layout.addLayout(progress_layout)
         layout.addStretch()
         layout.addWidget(dl_button)
 
@@ -276,6 +300,9 @@ class downloadWindow(QDialog):
         self.download_process = downloadThread(self, self.video_url.text(), self.folder_path)
         self.download_process.error.connect(self.show_messege)
         self.download_process.success.connect(self.show_messege)
+        self.download_process.progress.connect(self.update_progress_bar)
+        self.download_process.status.connect(self.update_status_message)
+        self.download_process.finished.connect(self.reset_status_message)
         self.download_process.start()
 
     def show_messege(self, mes=None):
@@ -284,9 +311,33 @@ class downloadWindow(QDialog):
         else:
             QMessageBox.information(self, "success", "Finish Download")
 
+    def update_status_message(self, status):
+        if status == "started":
+            self.progress_status.setText("Preparing for Download")
+        elif status == "downloading":
+            self.progress_status.setText("Download in Progress")
+        elif status == "finished":
+            self.progress_status.setText("Download Finished")
+
+    def reset_status_message(self, fn):
+        print(f"filename at dialog: {fn}")
+        self.progress_status.setText("Waiting")
+        self.progress_bar.setValue(0)
+        if self.open_after_download.isChecked():
+            self.video.emit(fn)
+            self.close()
+
+    def update_progress_bar(self, value):
+        self.progress_bar.setValue(value)
+
+
+
 class downloadThread(QThread):
     error = Signal(str)
     success = Signal()
+    progress = Signal(int)
+    status = Signal(str)
+    finished = Signal(str)
 
     def __init__(self, dl_window ,url, folder):
         super().__init__()
@@ -295,17 +346,32 @@ class downloadThread(QThread):
         self.folder = folder
     
     def run(self):
+        self.status.emit("started")
+        def progress_hook(d):
+            if d['status'] == 'downloading':
+                # _percent_strはただの文字列じゃなくて装飾文字だから扱える代物じゃなかった
+                percent = int(d['downloaded_bytes'] / d['total_bytes'] * 100)
+                self.progress.emit(percent)
+                self.status.emit("downloading")
+            elif d['status'] == 'finished':
+                self.status.emit("finished")
+
         ydl_opts = {
             "format": "bv*+ba/b", # bestvideoとbestaudio or best video&audioをダウンロード
             "remote_components": ["ejs:github"], # Denoインストール必須
-            'outtmpl': os.path.join(self.folder, '%(title)s.%(ext)s'),
-            # 'progress_hooks': [progress_hook],
+            "outtmpl": os.path.join(self.folder, '%(title)s.%(ext)s'),
+            "progress_hooks": [progress_hook],
+            "merge_output_format": "mp4",
         }
         
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([self.url])
+                # ydl.download([self.url])
+                info = ydl.extract_info(self.url, download=True)
+                filename = ydl.prepare_filename(info)
+                print(filename)
             self.success.emit()
+            self.finished.emit(filename)
         except Exception as e:
            self.error.emit(e)
             # QThread内でメッセージボックスなどUIをいじるとエラーが生じる
