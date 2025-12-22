@@ -274,9 +274,20 @@ class downloadWindow(QDialog):
         os.makedirs(self.folder_path, exist_ok=True)
         
         self.download_process = downloadThread(self, self.video_url.text(), self.folder_path)
+        self.download_process.error.connect(self.show_messege)
+        self.download_process.success.connect(self.show_messege)
         self.download_process.start()
 
+    def show_messege(self, mes=None):
+        if mes != None:
+            QMessageBox.warning(self, "error", f"Failed to Download\n{mes}")
+        else:
+            QMessageBox.information(self, "success", "Finish Download")
+
 class downloadThread(QThread):
+    error = Signal(str)
+    success = Signal()
+
     def __init__(self, dl_window ,url, folder):
         super().__init__()
         self.dl_window = dl_window
@@ -285,19 +296,19 @@ class downloadThread(QThread):
     
     def run(self):
         ydl_opts = {
-            'format': 'mp4',
+            "format": "bv*+ba/b", # bestvideoとbestaudio or best video&audioをダウンロード
+            "remote_components": ["ejs:github"], # Denoインストール必須
             'outtmpl': os.path.join(self.folder, '%(title)s.%(ext)s'),
             # 'progress_hooks': [progress_hook],
-            'quiet': True,
-            'no_warning': True,
         }
         
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([self.url])
-            QMessageBox.information(self, "success", "Finish Download")
+            self.success.emit()
         except Exception as e:
-            QMessageBox.warning(self.dl_window, "error", f"Failed to Download\n{e}")
+           self.error.emit(e)
+            # QThread内でメッセージボックスなどUIをいじるとエラーが生じる
             # expected string or bytes-like object, got 'PySide6.QtWidgets.QLineEdit'
 
 
