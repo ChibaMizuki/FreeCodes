@@ -15,6 +15,8 @@ from PySide6.QtWidgets import(
     QLabel,
     QSizePolicy,
     QWidget,
+    QMenuBar,
+    QComboBox,
 )
 from PySide6.QtCore import(
     Signal,
@@ -35,6 +37,13 @@ class QRGenerator(QMainWindow):
         self.editor.show()
         self.editor.gen.connect(self.update_qr)
 
+        # メニューバー
+        menu_bar = QMenuBar(self)
+        generator = menu_bar.addAction("作成")
+        generator.triggered.connect(self.show_edit_window)
+        self.setMenuBar(menu_bar)
+
+        # レイアウト
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
@@ -45,6 +54,12 @@ class QRGenerator(QMainWindow):
         # central_widgetの中にshow_qrを入れることにより、デフォルトの空白が適用されて枠ができたように見える？
         layout = QVBoxLayout(central_widget)
         layout.addWidget(self.show_qr)
+
+    def show_edit_window(self):
+        if self.editor.isVisible():
+            return
+
+        self.editor.show()
 
     def update_qr(self, img):
         # QImageとQPixmapの違い
@@ -90,6 +105,33 @@ class QREditor(QDialog):
         input_button_layout.addStretch()
         input_outside_layout.addLayout(input_button_layout)
 
+        # オプション
+        option_layout = QVBoxLayout()
+        version_layout = QHBoxLayout()
+        error_correction_layout = QHBoxLayout()
+
+        self.version_ddlist = QComboBox()
+        for x in range(1, 41):
+            self.version_ddlist.addItem(str(x))
+
+        self.error_ddlist = QComboBox()
+        level_list = ("低(7%)", "並(15%)", "高(25%)", "最高(30%)")
+        self.error_ddlist.addItems(level_list)
+        self.error_ddlist.setCurrentIndex(1)
+        
+        version_layout.addWidget(QLabel("バージョン"))
+        version_layout.addStretch()
+        version_layout.addWidget(self.version_ddlist)
+        version_layout.addStretch()
+
+        error_correction_layout.addWidget(QLabel("誤り訂正能力"))
+        error_correction_layout.addStretch()
+        error_correction_layout.addWidget(self.error_ddlist)
+        error_correction_layout.addStretch()
+
+        option_layout.addLayout(version_layout)
+        option_layout.addLayout(error_correction_layout)
+
         # ボタン
         button_layout = QHBoxLayout()
 
@@ -104,17 +146,24 @@ class QREditor(QDialog):
         button_layout.addStretch()
 
         layout.addLayout(input_outside_layout)
+        layout.addLayout(option_layout)
         layout.addLayout(button_layout)
 
     def generate_qrcode(self):
         data = self.input_field.text()
+        error_correction = (
+            qrcode.constants.ERROR_CORRECT_L,
+            qrcode.constants.ERROR_CORRECT_M,
+            qrcode.constants.ERROR_CORRECT_Q,
+            qrcode.constants.ERROR_CORRECT_H
+        )
 
         if not data:
             return
         # https://github.com/lincolnloop/python-qrcode
         qr = qrcode.QRCode(
-            version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            version=int(self.version_ddlist.currentText()),
+            error_correction=error_correction[self.error_ddlist.currentIndex()],
             box_size=20,
             border=4,
         )
