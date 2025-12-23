@@ -17,6 +17,7 @@ from PySide6.QtWidgets import(
     QWidget,
     QMenuBar,
     QComboBox,
+    QFileDialog,
 )
 from PySide6.QtCore import(
     Signal,
@@ -138,6 +139,7 @@ class QREditor(QDialog):
         generate_button = QPushButton("作成")
         generate_button.clicked.connect(self.generate_qrcode)
         save_button = QPushButton("保存")
+        save_button.clicked.connect(self.save_qrcode)
 
         button_layout.addStretch()
         button_layout.addWidget(generate_button)
@@ -174,15 +176,19 @@ class QREditor(QDialog):
         # https://zenn.dev/tamanobi/articles/88dacd450f8405c9a5a9
         # 画像をbytesで保存して渡す例
         img = qr.make_image(fill='black', back_color='white')
+        self.temp_img = qr.make_image(fill='black', back_color='white')
         buffer = io.BytesIO() # メモリに仮想ファイルを用意
         img.save(buffer, format="PNG") # 仮想ファイルにPNG形式で保存
         saved_img = QImage.fromData(buffer.getvalue()) # fromdata()で与えられたデータからQImageを構築
 
         self.gen.emit(saved_img)
-        # img.show()
     
     def clear_input(self):
         self.input_field.clear()
+
+    def save_qrcode(self):
+        filename = QFileDialog.getSaveFileName(self, "保存", "./", "Image files (*.png)")
+        self.temp_img.save(filename[0])
 
 
 if __name__ == "__main__":
