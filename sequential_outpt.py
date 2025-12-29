@@ -1,6 +1,7 @@
 import cv2
 import os
 import glob
+import numpy as np
 
 def seq_output(video, output_path, basename, start:int, finish:int):
     if start < 0:
@@ -20,45 +21,66 @@ def seq_output(video, output_path, basename, start:int, finish:int):
     f = 1
 
     if (start != finish) and (start < finish):
-        for n in range(start, finish):
-            video.set(cv2.CAP_PROP_POS_FRAMES, n)
+        video.set(cv2.CAP_PROP_POS_FRAMES, start)
+        for _ in range(start, finish):
             ret, frame = video.read()
 
             if ret:
                 cv2.imwrite(f"{base_path}_{f:04}.jpg", frame)
                 f += 1
             else:
-                return
+                print("could not get image")
+                break
             
     video.release()
 
-def make_video_from_seq(file_path, output_path=None):
+def make_video_from_seq(file_path, output_path=None, fps=30):
+
+    def sort_file(file:list):
+        # spl_list = []
+        # sorted_list = []
+        # for f in file:
+        #     spl = f.split(".")[0]
+        #     spl_list.append(int(spl[-4:]))
+
+        # sort_key = np.argsort(spl_list)
+        # sort_key = sort_key.tolist()
+
+        # for f in sort_key:
+        #     sorted_list.append(file[f])
+        # return sorted_list
+        # ここまで長ったらしく書かずとも↓で十分とのこと
+        return sorted(
+            file,
+            key=lambda f: int(os.path.splitext(f)[0][-4:])
+        )
+
+    
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 
-    video = cv2.VideoWriter("test.mp4", fourcc, 30, (1920, 1080))
+    file = glob.glob(f"{file_path}/*_[0-9][0-9][0-9][0-9].jpg")
+    sorted_file = sort_file(file)
 
-    i = 1
-    while True:
-        file = glob.glob(f"{file_path}/*_%04d.jpg" % i)
-        if not file:
-            break
-        img = cv2.imread(file[0])
-        i += 1
+    first_image = cv2.imread(sorted_file[0])
+    height, width, _ = first_image.shape
+    video = cv2.VideoWriter("test.mp4", fourcc, fps, (width, height))
 
+    for f in sorted_file:
+        img = cv2.imread(f)
         if img is None:
-            break
-
+            print(f"skip: {f}")
+            continue
         video.write(img)
 
     video.release()
-
 
 
 start = 30
 finish = 180
 video = "test/video/irisout.mp4"
 output_path = "video"
+file_path = "video"
 basename = "test"
 
 # seq_output(video, output_path, basename, start=start, finish=finish)
-make_video_from_seq(output_path)
+make_video_from_seq(file_path)
