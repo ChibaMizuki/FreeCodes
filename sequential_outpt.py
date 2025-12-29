@@ -1,5 +1,6 @@
 import cv2
 import os
+import glob
 
 def seq_output(video, output_path, basename, start:int, finish:int):
     if start < 0:
@@ -28,12 +29,36 @@ def seq_output(video, output_path, basename, start:int, finish:int):
                 f += 1
             else:
                 return
-    
+            
+    video.release()
+
+def make_video_from_seq(file_path, output_path=None):
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+
+    video = cv2.VideoWriter("test.mp4", fourcc, 30, (1920, 1080))
+
+    i = 1
+    while True:
+        file = glob.glob(f"{file_path}/*_%04d.jpg" % i)
+        if not file:
+            break
+        img = cv2.imread(file[0])
+        i += 1
+
+        if img is None:
+            break
+
+        video.write(img)
+
+    video.release()
+
+
 
 start = 30
-finish = 45 
+finish = 180
 video = "test/video/irisout.mp4"
 output_path = "video"
 basename = "test"
 
-seq_output(video, output_path, basename, start=start, finish=finish)
+# seq_output(video, output_path, basename, start=start, finish=finish)
+make_video_from_seq(output_path)
