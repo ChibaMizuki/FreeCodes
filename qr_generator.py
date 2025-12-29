@@ -36,7 +36,7 @@ class QRGenerator(QMainWindow):
         self.setWindowTitle("QRGenerator")
         self.editor = QREditor()
         self.editor.show()
-        self.editor.gen.connect(self.update_qr)
+        self.editor.qr_generated.connect(self.update_qr)
 
         # メニューバー
         menu_bar = QMenuBar(self)
@@ -80,7 +80,7 @@ class QRGenerator(QMainWindow):
 
 
 class QREditor(QDialog):
-    gen = Signal(object)
+    qr_generated = Signal(object)
 
     def __init__(self):
         super().__init__()
@@ -176,12 +176,12 @@ class QREditor(QDialog):
         # https://zenn.dev/tamanobi/articles/88dacd450f8405c9a5a9
         # 画像をbytesで保存して渡す例
         img = qr.make_image(fill='black', back_color='white')
-        self.temp_img = qr.make_image(fill='black', back_color='white')
+        self.temp_img = img
         buffer = io.BytesIO() # メモリに仮想ファイルを用意
         img.save(buffer, format="PNG") # 仮想ファイルにPNG形式で保存
         saved_img = QImage.fromData(buffer.getvalue()) # fromdata()で与えられたデータからQImageを構築
 
-        self.gen.emit(saved_img)
+        self.qr_generated.emit(saved_img)
     
     def clear_input(self):
         self.input_field.clear()
