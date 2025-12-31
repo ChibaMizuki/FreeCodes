@@ -2,6 +2,7 @@ import cv2
 import os
 import glob
 import numpy as np
+import tempfile
 
 def seq_output(video, output_path, basename, start:int, finish:int):
     if start < 0:
@@ -63,16 +64,20 @@ def make_video_from_seq(file_path, output_path=None, fps=30):
 
     first_image = cv2.imread(sorted_file[0])
     height, width, _ = first_image.shape
-    video = cv2.VideoWriter("test.mp4", fourcc, fps, (width, height))
+    tmp = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+    tmp.close()
+    video = cv2.VideoWriter(tmp.name, fourcc, fps, (width, height))
 
-    for f in sorted_file:
-        img = cv2.imread(f)
-        if img is None:
-            print(f"skip: {f}")
-            continue
-        video.write(img)
-
-    video.release()
+    try:
+        for f in sorted_file:
+            img = cv2.imread(f)
+            if img is None:
+                print(f"skip: {f}")
+                continue
+            video.write(img)
+    finally:
+        video.release()
+        os.remove(tmp.name)
 
 
 start = 30
