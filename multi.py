@@ -33,7 +33,9 @@ from PySide6.QtCore import (
     Qt,
     QTimer,
     Signal,
+    Slot,
     QThread,
+    QObject,
 )
 
 USER_DOWNLOAD_FOLDER = os.path.join(
@@ -69,7 +71,7 @@ class VideoPlayer(QMainWindow):
         self.dl_window = DownloadWindow()
         self.dl_window.hide()
         self.dl_window.video.connect(self.open_file)
-        self.make_seq = MakeSequential(video_path=None)
+        self.make_seq = MakeSeqWindow(video_path=None)
         self.make_seq.hide()
         self.make_video = MakeVideo()
         self.make_video.hide()
@@ -246,7 +248,7 @@ class VideoPlayer(QMainWindow):
             self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
 
     def open_make_seq_window(self):
-        self.make_seq = MakeSequential(self.send_filename)
+        self.make_seq = MakeSeqWindow(self.send_filename)
         self.make_seq.show()
 
     def closeEvent(self, event):
@@ -387,7 +389,7 @@ class DownloadWindow(QDialog):
         self.progress_bar.setValue(value)
 
 
-
+# QThread継承形式（非推奨らしい？）
 class downloadThread(QThread):
     error = Signal(str)
     success = Signal()
@@ -433,7 +435,7 @@ class downloadThread(QThread):
             # QThread内でメッセージボックスなどUIをいじるとエラーが生じる
             # expected string or bytes-like object, got 'PySide6.QtWidgets.QLineEdit'
 
-class MakeSequential(QDialog):
+class MakeSeqWindow(QDialog):
     def __init__(self, video_path):
         super().__init__()
         if not video_path:
@@ -442,8 +444,7 @@ class MakeSequential(QDialog):
         self.resize(600, 400)
         self.setWindowTitle("Make Sequential Images From Video")
 
-        self.video_path = video_path
-        self.video = cv2.VideoCapture(self.video_path)
+        self.video = cv2.VideoCapture(video_path)
         self.fps = self.video.get(cv2.CAP_PROP_FPS)
         self.total_frames = self.video.get(cv2.CAP_PROP_FRAME_COUNT)
         self.length = self.total_frames / self.fps
@@ -489,18 +490,18 @@ class MakeSequential(QDialog):
         self.input_start.setEnabled(False)
         self.input_end.setEnabled(False)
 
-        radio_layout.addWidget(QLabel("\nPlease Select a Creation Method\nseconds: Inaccurate\tframes: Accurate\tAll: All Frames"))
+        radio_layout.addWidget(QLabel("\nPlease Select a Creation Method"))
         radio_layout.addWidget(self.radio_seconds)
         radio_layout.addWidget(self.radio_frames)
         radio_layout.addWidget(self.radio_all)
         custam_layout.addWidget(self.radio_custam)
         custam_layout.addStretch()
         custam_layout.addWidget(self.input_start)
-        custam_layout.addStretch()
+        custam_layout.addSpacing(20)
         custam_layout.addWidget(QLabel("to"))
         custam_layout.addSpacing(20)
         custam_layout.addWidget(self.input_end)
-        custam_layout.addSpacing(20)
+        custam_layout.addStretch()
         radio_layout.addLayout(custam_layout)
 
         # 開始と終了
@@ -520,6 +521,7 @@ class MakeSequential(QDialog):
         range_layout.addWidget(self.end_label)
 
         # ダウンロードフォルダ
+        save_layout = QHBoxLayout()
         folder_layout = QHBoxLayout()
 
         self.download_folder = USER_DOWNLOAD_FOLDER
@@ -527,6 +529,7 @@ class MakeSequential(QDialog):
         self.dl_path.setReadOnly(True)
         select_button = QPushButton("select")
         select_button.clicked.connect(self.select_folder)
+        self.seq_name = QLineEdit("output")
 
         folder_layout.addWidget(QLabel("Path"))
         folder_layout.addSpacing(20)
@@ -534,9 +537,15 @@ class MakeSequential(QDialog):
         folder_layout.addSpacing(20)
         folder_layout.addWidget(select_button)
 
+        save_layout.addWidget(QLabel("File Name"))
+        save_layout.addSpacing(20)
+        save_layout.addWidget(self.seq_name)
+        save_layout.addStretch()
+
         # 処理開始ボタン
         button_layout = QHBoxLayout()
         start_button = QPushButton("start")
+        start_button.clicked.connect(self.make_seq_images)
         button_layout.addStretch()
         button_layout.addWidget(start_button)
         button_layout.addStretch()
@@ -547,6 +556,7 @@ class MakeSequential(QDialog):
         layout.addLayout(range_layout)
         layout.addStretch()
         layout.addLayout(folder_layout)
+        layout.addLayout(save_layout)
         layout.addLayout(button_layout)
 
     def set_value(self, value):
@@ -591,9 +601,73 @@ class MakeSequential(QDialog):
             self.download_folder = foldername
             self.dl_path.setText(foldername)
 
-    def make_seq_images(self):    
-        self.video.release()
+    def make_seq_images(self):
+        if self.radio_all.isChecked():
+            start = 0
+            end = self.total_frames
+        elif self.radio_custam.isChecked():
+            start = self.input_start.value()
+            end = self.input_end.value()
+        else:
+            start = self.slider.value()[0]
+            end = self.slider.value()[1]
+        output_dir = self.download_folder
+        output_file_name = self.seq_name.text()
 
+        def show_progress(value):
+            print(f"finished: {value} / {end}")
+
+        self.worker = MakeSeqWorker(self.video, start, end, output_dir, output_file_name)
+        self.make_seq_thread = QThread()
+        self.worker.moveToThread(self.make_seq_thread)
+
+        self.make_seq_thread.started.connect(self.worker.run)
+        self.worker.progress.connect(show_progress)
+        self.worker.finished.connect(self.make_seq_thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.make_seq_thread.finished.connect(self.make_seq_thread.deleteLater)
+
+        self.make_seq_thread.start()
+
+# movetoThread方式（推奨されているらしい？）
+class MakeSeqWorker(QObject):
+    progress = Signal(int)
+    error = Signal()
+    finished = Signal()
+
+    def __init__(self, video, start, end, dir, filename):
+        super().__init__()
+        self.video = video
+        self.start = start
+        self.end = end
+        self.dir = dir
+        self.filename = filename
+        print(self.video)
+
+        os.makedirs(dir, exist_ok=True)
+        self.base = os.path.join(dir, filename)
+
+    @Slot()
+    def run(self):
+        print("started")
+        self.video.set(cv2.CAP_PROP_POS_FRAMES, self.start)
+        if self.start == self.end:
+            ret, frame = self.video.read()
+            if ret:
+                cv2.imwrite(f"{self.base}_0001.png", frame)
+            else:
+                self.error.emit()
+        elif self.start < self.end:
+            for num in range(self.end - self.start):
+                ret, frame = self.video.read()
+                if ret:
+                    cv2.imwrite(f"{self.base}_{num+1:04}.png", frame)
+                    self.progress.emit(num+1)
+                else:
+                    self.error.emit()
+
+        self.video.release()
+        self.finished.emit()
 
 
 class MakeVideo(QDialog):
