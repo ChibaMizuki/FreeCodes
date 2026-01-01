@@ -26,6 +26,8 @@ from PySide6.QtWidgets import (
     QDialog,
     QProgressBar,
     QCheckBox,
+    QRadioButton,
+    QSpinBox,
 )
 from PySide6.QtCore import (
     Qt,
@@ -33,6 +35,23 @@ from PySide6.QtCore import (
     Signal,
     QThread,
 )
+
+
+# スクロール無効のスライダーにカスタム
+# eventfilterを使用した書き方もあるっぽい？
+class NoWheelSlider(QSlider):
+    def wheelEvent(self, e):
+        e.ignore()
+
+
+class CustamRangeSlider(QRangeSlider):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._bar_moves_all = False
+
+    def wheelEvent(self, e):
+        e.ignore()
+
 
 
 class VideoPlayer(QMainWindow):
@@ -89,7 +108,7 @@ class VideoPlayer(QMainWindow):
         self.time_label = QLabel("00:00:00 / 00:00:00")
 
         # シークバー
-        self.slider = QSlider(Qt.Horizontal)
+        self.slider = NoWheelSlider(Qt.Horizontal)
         self.slider.setRange(0, 1000)
         self.slider.sliderPressed.connect(lambda: self.timer.stop())
         self.slider.sliderMoved.connect(self.slider_move)
@@ -100,7 +119,7 @@ class VideoPlayer(QMainWindow):
         self.mute = False
         self.mute_button = QPushButton(self.style().standardIcon(QStyle.SP_MediaVolume), "")
         self.mute_button.clicked.connect(self.set_mute)
-        self.volume = QSlider(Qt.Horizontal)
+        self.volume = NoWheelSlider(Qt.Horizontal)
         self.volume.setRange(0, 100)
         self.volume.setValue(50)
         self.volume.valueChanged.connect(self.set_volum)
@@ -134,7 +153,7 @@ class VideoPlayer(QMainWindow):
         self.end_check_timer.timeout.connect(self.end_check)
         
     # 動画表示
-    def open_file(self, fn=False):
+    def open_file(self, fn=None, *args, **kwargs):
         print(f"filename at open_file: {fn}")
         if not fn:
             filename, _ = QFileDialog.getOpenFileName(self, "Choose Video")
@@ -147,11 +166,11 @@ class VideoPlayer(QMainWindow):
             self.media = self.instance.media_new(filename)
             self.player.set_media(self.media)
             self.player.set_hwnd(self.video_frame.winId())
-            self.mute = False
-            self.player.audio_set_mute(False)
             self.mute_button.setIcon(self.style().standardIcon(QStyle.SP_MediaVolume))
             self.volume.setValue(50)
             self.player.play()
+            self.mute = False
+            self.player.audio_set_mute(False)
             self.timer.start()
             self.end_check_timer.start()
             self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
@@ -420,32 +439,143 @@ class downloadThread(QThread):
 class MakeSequential(QDialog):
     def __init__(self, video_path):
         super().__init__()
+        if not video_path:
+            return
+
         self.resize(600, 400)
         self.setWindowTitle("Make Sequential Images From Video")
 
+        self.video_path = video_path
+        self.video = cv2.VideoCapture(self.video_path)
+        self.fps = self.video.get(cv2.CAP_PROP_FPS)
+        self.total_frames = self.video.get(cv2.CAP_PROP_FRAME_COUNT)
+        self.length = self.total_frames / self.fps
+
         layout = QVBoxLayout(self)
+
+        # 動画情報
+        video_info_layout = QHBoxLayout()
+        fps_label = QLabel(f"fps: {round(self.fps, 2)}")
+        frames_label = QLabel(f"frame: {int(self.total_frames)}")
+        length_label = QLabel(f"length: {round(self.length, 2)}s")
+
+
+        video_info_layout.addWidget(fps_label)
+        video_info_layout.addWidget(frames_label)
+        video_info_layout.addWidget(length_label)
+
+        # ラジオボタン
+        radio_layout = QVBoxLayout()
+        custam_layout = QHBoxLayout()
+        self.radio_seconds = QRadioButton("seconds")
+        self.radio_seconds.clicked.connect(self.radio_clicked)
+        self.radio_frames = QRadioButton("frames")
+        self.radio_frames.clicked.connect(self.radio_clicked)
+        self.radio_all = QRadioButton("All")
+        self.radio_all.clicked.connect(self.radio_clicked)
+        self.radio_custam = QRadioButton("Custam")
+        self.radio_custam.clicked.connect(self.radio_clicked)
+        self.radio_seconds.setChecked(True)
+
+        self.input_start = QSpinBox()
+        self.input_start.valueChanged.connect(self.set_min_value)
+        self.input_end = QSpinBox()
+        self.input_end.valueChanged.connect(self.set_max_value)
+
+        self.input_start.setMinimum(0)
+        self.input_start.setValue(0)
+        self.input_end.setMaximum(int(self.total_frames))
+        self.input_end.setValue(int(self.total_frames))
+        self.input_start.setMaximum(self.input_end.value())
+        self.input_end.setMinimum(self.input_start.value())
+
+        self.input_start.setEnabled(False)
+        self.input_end.setEnabled(False)
+
+        radio_layout.addWidget(QLabel("\nPlease Select a Creation Method\nseconds: Inaccurate\tframes: Accurate\tAll: All Frames"))
+        radio_layout.addWidget(self.radio_seconds)
+        radio_layout.addWidget(self.radio_frames)
+        radio_layout.addWidget(self.radio_all)
+        custam_layout.addWidget(self.radio_custam)
+        custam_layout.addStretch()
+        custam_layout.addWidget(self.input_start)
+        custam_layout.addStretch()
+        custam_layout.addWidget(QLabel("to"))
+        custam_layout.addStretch()
+        custam_layout.addWidget(self.input_end)
+        custam_layout.addStretch()
+        radio_layout.addLayout(custam_layout)
 
         # 開始と終了
         range_layout = QHBoxLayout()
-        start_label = QLabel("0")
-        end_label = QLabel("100")
-        slider = QRangeSlider(Qt.Orientation.Horizontal)
-        slider.setValue((0, 100))
-        slider.show()
+        self.start_label = QLabel("0")
+        self.end_label = QLabel(f"{int(round(self.length, 0))}")
+        self.slider = CustamRangeSlider(Qt.Orientation.Horizontal)
+        self.slider.valueChanged.connect(self.set_value)
+        self.slider.setRange(0, self.total_frames)
+        self.slider.setValue((0, self.total_frames))
+        self.slider.show()
 
-        range_layout.addWidget(start_label)
-        range_layout.addWidget(slider)
-        range_layout.addWidget(end_label)
+        range_layout.addWidget(self.start_label)
+        range_layout.addSpacing(20)
+        range_layout.addWidget(self.slider)
+        range_layout.addSpacing(20)
+        range_layout.addWidget(self.end_label)
 
 
         # 処理開始ボタン
+        button_layout = QHBoxLayout()
+        start_button = QPushButton("start")
+        button_layout.addStretch()
+        button_layout.addWidget(start_button)
+        button_layout.addStretch()
 
+        layout.addLayout(video_info_layout)
+        layout.addLayout(radio_layout)
+        layout.addStretch()
         layout.addLayout(range_layout)
-        
-        if not video_path:
-            return 
-        video = cv2.VideoCapture(video_path)
-        video.release()
+        layout.addStretch()
+        layout.addLayout(button_layout)
+
+    def set_value(self, value):
+        if self.radio_seconds.isChecked():
+            self.start_label.setText(str(int(round((value[0]/ self.fps), 0))))
+            self.end_label.setText(str(int(round((value[1]/ self.fps), 0))))
+        elif self.radio_frames.isChecked():
+            self.start_label.setText(str(int(value[0])))
+            self.end_label.setText(str(int(value[1])))
+        elif self.radio_frames.isChecked() or self.radio_custam.isChecked():
+            pass
+
+    def set_max_value(self):
+        self.input_start.setMaximum(self.input_end.value())
+
+    def set_min_value(self):
+        self.input_end.setMinimum(self.input_start.value())
+
+    def radio_clicked(self):
+        if self.radio_seconds.isChecked():
+            self.input_start.setEnabled(False)
+            self.input_end.setEnabled(False)
+            self.slider.setEnabled(True)
+            self.end_label.setText(str(int(round(self.length, 0))))
+        elif self.radio_frames.isChecked():
+            self.input_start.setEnabled(False)
+            self.input_end.setEnabled(False)
+            self.slider.setEnabled(True)
+            self.end_label.setText(str(int(self.total_frames)))
+        elif self.radio_all.isChecked():
+            self.input_start.setEnabled(False)
+            self.input_end.setEnabled(False)
+            self.slider.setEnabled(False)
+        elif self.radio_custam.isChecked():
+            self.input_start.setEnabled(True)
+            self.input_end.setEnabled(True)
+            self.slider.setEnabled(False)
+
+    def process(self):    
+        self.video.release()
+
 
 
 class MakeVideo(QDialog):
