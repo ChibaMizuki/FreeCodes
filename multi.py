@@ -36,6 +36,11 @@ from PySide6.QtCore import (
     QThread,
 )
 
+USER_DOWNLOAD_FOLDER = os.path.join(
+    os.path.expanduser("~"),
+    "Downloads"
+)
+
 
 # スクロール無効のスライダーにカスタム
 # eventfilterを使用した書き方もあるっぽい？
@@ -275,7 +280,7 @@ class DownloadWindow(QDialog):
 
         clear_button = QPushButton("clear")
         clear_button.setMaximumWidth(80)
-        clear_button.clicked.connect(self.clear_url)
+        clear_button.clicked.connect(lambda: self.video_url.clear())
 
         # 保存先設定
         save_path_layout = QHBoxLayout()
@@ -284,7 +289,7 @@ class DownloadWindow(QDialog):
         save_path_layout.addWidget(path_label)
 
         # 内部でパス保持する方の変数
-        self.folder_path = self.get_user_download_folder()
+        self.folder_path = USER_DOWNLOAD_FOLDER
         # パスを表示する方の変数
         self.dl_path = QLineEdit(self.folder_path)
         self.dl_path.setReadOnly(True)
@@ -333,14 +338,6 @@ class DownloadWindow(QDialog):
         layout.addLayout(progress_layout)
         layout.addStretch()
         layout.addWidget(dl_button)
-
-    def clear_url(self):
-        self.video_url.clear()
-
-    @staticmethod
-    def get_user_download_folder():
-        user_folder = os.path.expanduser("~")
-        return os.path.join(user_folder, "Downloads")
     
     def select_folder(self):
         foldername = QFileDialog.getExistingDirectory(self, "select folder")
@@ -501,9 +498,9 @@ class MakeSequential(QDialog):
         custam_layout.addWidget(self.input_start)
         custam_layout.addStretch()
         custam_layout.addWidget(QLabel("to"))
-        custam_layout.addStretch()
+        custam_layout.addSpacing(20)
         custam_layout.addWidget(self.input_end)
-        custam_layout.addStretch()
+        custam_layout.addSpacing(20)
         radio_layout.addLayout(custam_layout)
 
         # 開始と終了
@@ -522,6 +519,20 @@ class MakeSequential(QDialog):
         range_layout.addSpacing(20)
         range_layout.addWidget(self.end_label)
 
+        # ダウンロードフォルダ
+        folder_layout = QHBoxLayout()
+
+        self.download_folder = USER_DOWNLOAD_FOLDER
+        self.dl_path = QLineEdit(self.download_folder)
+        self.dl_path.setReadOnly(True)
+        select_button = QPushButton("select")
+        select_button.clicked.connect(self.select_folder)
+
+        folder_layout.addWidget(QLabel("Path"))
+        folder_layout.addSpacing(20)
+        folder_layout.addWidget(self.dl_path)
+        folder_layout.addSpacing(20)
+        folder_layout.addWidget(select_button)
 
         # 処理開始ボタン
         button_layout = QHBoxLayout()
@@ -535,6 +546,7 @@ class MakeSequential(QDialog):
         layout.addStretch()
         layout.addLayout(range_layout)
         layout.addStretch()
+        layout.addLayout(folder_layout)
         layout.addLayout(button_layout)
 
     def set_value(self, value):
@@ -573,7 +585,13 @@ class MakeSequential(QDialog):
             self.input_end.setEnabled(True)
             self.slider.setEnabled(False)
 
-    def process(self):    
+    def select_folder(self):
+        foldername = QFileDialog.getExistingDirectory(self, "select folder")
+        if foldername:
+            self.download_folder = foldername
+            self.dl_path.setText(foldername)
+
+    def make_seq_images(self):    
         self.video.release()
 
 
