@@ -97,6 +97,9 @@ class VideoPlayer(QMainWindow):
 
         # ループ再生
         # 音量
+        self.mute = False
+        self.mute_button = QPushButton(self.style().standardIcon(QStyle.SP_MediaVolume), "")
+        self.mute_button.clicked.connect(self.set_mute)
         self.volume = QSlider(Qt.Horizontal)
         self.volume.setRange(0, 100)
         self.volume.setValue(50)
@@ -115,7 +118,7 @@ class VideoPlayer(QMainWindow):
         control_layout.addWidget(self.play_button)
         control_layout.addWidget(self.time_label)
         control_layout.addWidget(self.slider)
-        control_layout.addWidget(QLabel("vol"))
+        control_layout.addWidget(self.mute_button)
         control_layout.addWidget(self.volume)
         
         # レイアウトをまとめて追加
@@ -131,7 +134,7 @@ class VideoPlayer(QMainWindow):
         self.end_check_timer.timeout.connect(self.end_check)
         
     # 動画表示
-    def open_file(self, fn):
+    def open_file(self, fn=False):
         print(f"filename at open_file: {fn}")
         if not fn:
             filename, _ = QFileDialog.getOpenFileName(self, "Choose Video")
@@ -144,6 +147,9 @@ class VideoPlayer(QMainWindow):
             self.media = self.instance.media_new(filename)
             self.player.set_media(self.media)
             self.player.set_hwnd(self.video_frame.winId())
+            self.mute = False
+            self.player.audio_set_mute(False)
+            self.mute_button.setIcon(self.style().standardIcon(QStyle.SP_MediaVolume))
             self.volume.setValue(50)
             self.player.play()
             self.timer.start()
@@ -154,7 +160,10 @@ class VideoPlayer(QMainWindow):
             self.seq_to_video.setEnabled(True)
 
     def toggle_play(self):
-        if self.player.is_playing():
+        state = self.player.get_state()
+        if state == vlc.State.NothingSpecial:
+            self.open_file(fn=None)
+        elif state == vlc.State.Playing:
             self.player.pause()
             self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
         else:
@@ -163,6 +172,16 @@ class VideoPlayer(QMainWindow):
 
     def set_volum(self, value):
         self.player.audio_set_volume(value)
+
+    def set_mute(self):
+        if not self.mute:
+            self.mute = True
+            self.player.audio_set_mute(True)
+            self.mute_button.setIcon(self.style().standardIcon(QStyle.SP_MediaVolumeMuted))
+        elif self.mute:
+            self.mute = False
+            self.player.audio_set_mute(False)
+            self.mute_button.setIcon(self.style().standardIcon(QStyle.SP_MediaVolume))
 
     def update_slider(self):
         if not self.player.is_playing():
