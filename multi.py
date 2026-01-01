@@ -1,9 +1,13 @@
 # media_player.pyをpyside6に移植
+# ダウンロード後の再生機能は動画単体のみサポート（プレイリストは今後気が向いたら開発）
 
-import vlc
-import yt_dlp
 import os
 import sys
+import vlc
+import yt_dlp
+import numpy as np
+import cv2
+from superqt import QRangeSlider
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -31,14 +35,20 @@ from PySide6.QtCore import (
 )
 
 
-class videoPlayer(QMainWindow):
+class VideoPlayer(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("PySide6 VLC Player")
         self.resize(1000, 700)
-        self.dl_window = downloadWindow(self)
+        self.send_filename = None
+
+        self.dl_window = DownloadWindow()
         self.dl_window.hide()
         self.dl_window.video.connect(self.open_file)
+        self.make_seq = MakeSequential(video_path=None)
+        self.make_seq.hide()
+        self.make_video = MakeVideo()
+        self.make_video.hide()
 
         # VLC初期化
         self.instance = vlc.Instance()
@@ -55,12 +65,20 @@ class videoPlayer(QMainWindow):
         
         # メニューバー
         menu_bar = QMenuBar(self)
+
         file = menu_bar.addMenu("file")
         file_open = file.addAction("open file")
         file_open.triggered.connect(self.open_file)
+        self.video_to_seq = file.addAction("Sequential output")
+        self.video_to_seq.setDisabled(True)
+        self.video_to_seq.triggered.connect(self.open_make_seq_window)
+        self.seq_to_video = file.addAction("Convert sequential images to video")
+        self.seq_to_video.setDisabled(True)
+        self.seq_to_video.triggered.connect(lambda: self.make_video.show())
+
         dl = menu_bar.addMenu("yt_dlp")
         download = dl.addAction("download")
-        download.triggered.connect(self.show_dl_window)
+        download.triggered.connect(lambda: self.dl_window.show())
         self.setMenuBar(menu_bar)
         
         # 再生ボタン
@@ -73,7 +91,7 @@ class videoPlayer(QMainWindow):
         # シークバー
         self.slider = QSlider(Qt.Horizontal)
         self.slider.setRange(0, 1000)
-        self.slider.sliderPressed.connect(self.slider_press)
+        self.slider.sliderPressed.connect(lambda: self.timer.stop())
         self.slider.sliderMoved.connect(self.slider_move)
         self.slider.sliderReleased.connect(self.slider_release)
 
@@ -116,12 +134,13 @@ class videoPlayer(QMainWindow):
     def open_file(self, fn):
         print(f"filename at open_file: {fn}")
         if not fn:
-            filename, _ = QFileDialog.getOpenFileName(self, "動画を選択")
+            filename, _ = QFileDialog.getOpenFileName(self, "Choose Video")
         else:
             filename = str(os.path.abspath(fn))
             print(f"filename (abspath): {filename}")
 
         if filename:
+            self.send_filename = filename
             self.media = self.instance.media_new(filename)
             self.player.set_media(self.media)
             self.player.set_hwnd(self.video_frame.winId())
@@ -131,6 +150,8 @@ class videoPlayer(QMainWindow):
             self.end_check_timer.start()
             self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
             self.slider.setValue(0)
+            self.video_to_seq.setEnabled(True)
+            self.seq_to_video.setEnabled(True)
 
     def toggle_play(self):
         if self.player.is_playing():
@@ -160,9 +181,6 @@ class videoPlayer(QMainWindow):
         s = sec % 60
         m = sec // 60
         return f"{m:02}:{s:02}.{ms:02}"
-    
-    def slider_press(self):
-        self.timer.stop()
 
     def slider_move(self, value):
         if self.player.get_length() > 0:
@@ -183,21 +201,24 @@ class videoPlayer(QMainWindow):
             self.player.set_position(0)
             self.slider.setValue(0)
             self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
-    
-    def show_dl_window(self):
-        self.dl_window.show()
+
+    def open_make_seq_window(self):
+        self.make_seq = MakeSequential(self.send_filename)
+        self.make_seq.show()
 
     def closeEvent(self, event):
         self.dl_window.close()
+        self.make_seq.close()
+        self.make_video.close()
 
 
-class downloadWindow(QDialog):
+class DownloadWindow(QDialog):
     success = Signal()
     error = Signal(str)
     video = Signal(str)
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self):
+        super().__init__()
         self.resize(600, 400)
         self.setWindowTitle("Download")
 
@@ -377,9 +398,46 @@ class downloadThread(QThread):
             # QThread内でメッセージボックスなどUIをいじるとエラーが生じる
             # expected string or bytes-like object, got 'PySide6.QtWidgets.QLineEdit'
 
+class MakeSequential(QDialog):
+    def __init__(self, video_path):
+        super().__init__()
+        self.resize(600, 400)
+        self.setWindowTitle("Make Sequential Images From Video")
+
+        layout = QVBoxLayout(self)
+
+        # 開始と終了
+        range_layout = QHBoxLayout()
+        start_label = QLabel("0")
+        end_label = QLabel("100")
+        slider = QRangeSlider(Qt.Orientation.Horizontal)
+        slider.setValue((0, 100))
+        slider.show()
+
+        range_layout.addWidget(start_label)
+        range_layout.addWidget(slider)
+        range_layout.addWidget(end_label)
+
+
+        # 処理開始ボタン
+
+        layout.addLayout(range_layout)
+        
+        if not video_path:
+            return 
+        video = cv2.VideoCapture(video_path)
+        video.release()
+
+
+class MakeVideo(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.resize(600, 400)
+        self.setWindowTitle("Make Video From Sequential Images")
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    player = videoPlayer()
+    player = VideoPlayer()
     player.show()
     sys.exit(app.exec())
