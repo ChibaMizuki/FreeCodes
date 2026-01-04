@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QRadioButton,
     QSpinBox,
+    QComboBox,
 )
 from PySide6.QtCore import (
     Qt,
@@ -520,7 +521,7 @@ class MakeSeqWindow(QDialog):
         range_layout.addSpacing(20)
         range_layout.addWidget(self.end_label)
 
-        # ダウンロードフォルダ
+        # ダウンロードフォルダ、ファイル表示
         save_layout = QHBoxLayout()
         folder_layout = QHBoxLayout()
 
@@ -531,6 +532,10 @@ class MakeSeqWindow(QDialog):
         select_button.clicked.connect(self.select_folder)
         self.seq_name = QLineEdit("output")
 
+        self.ext_box = QComboBox()
+        self.ext_box.addItem("jpg")
+        self.ext_box.addItem("png")
+
         folder_layout.addWidget(QLabel("Path"))
         folder_layout.addSpacing(20)
         folder_layout.addWidget(self.dl_path)
@@ -540,7 +545,17 @@ class MakeSeqWindow(QDialog):
         save_layout.addWidget(QLabel("File Name"))
         save_layout.addSpacing(20)
         save_layout.addWidget(self.seq_name)
+        save_layout.addSpacing(20)
+        save_layout.addWidget(QLabel("_ {file number} ."))
+        save_layout.addSpacing(20)
+        save_layout.addWidget(self.ext_box)
         save_layout.addStretch()
+
+        # 処理状況
+        self.status_label = QLabel("Process Status")
+        self.start_label.setAlignment(Qt.AlignCenter)
+        self.proc_status = QLabel("0 / 0")
+        self.proc_status.setAlignment(Qt.AlignCenter)
 
         # 処理開始ボタン
         button_layout = QHBoxLayout()
@@ -557,6 +572,8 @@ class MakeSeqWindow(QDialog):
         layout.addStretch()
         layout.addLayout(folder_layout)
         layout.addLayout(save_layout)
+        layout.addWidget(self.status_label)
+        layout.addWidget(self.proc_status)
         layout.addLayout(button_layout)
 
     def set_value(self, value):
@@ -613,19 +630,28 @@ class MakeSeqWindow(QDialog):
             end = self.slider.value()[1]
         output_dir = self.download_folder
         output_file_name = self.seq_name.text()
+        ext = self.ext_box.currentText()
 
         def show_progress(value):
-            print(f"finished: {value} / {end}")
+            self.proc_status.setText(f"{value} / {end - start}")
 
-        self.worker = MakeSeqWorker(self.video, start, end, output_dir, output_file_name)
+        def finished():
+            print("Finished Makeing Sequential Images")
+            self.make_seq_thread.deleteLater()
+        
+        def error():
+            print("An Error Has Occured")
+
+        self.worker = MakeSeqWorker(self.video, start, end, output_dir, output_file_name, ext)
         self.make_seq_thread = QThread()
         self.worker.moveToThread(self.make_seq_thread)
 
         self.make_seq_thread.started.connect(self.worker.run)
         self.worker.progress.connect(show_progress)
+        self.worker.error.connect(error)
         self.worker.finished.connect(self.make_seq_thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
-        self.make_seq_thread.finished.connect(self.make_seq_thread.deleteLater)
+        self.make_seq_thread.finished.connect(finished)
 
         self.make_seq_thread.start()
 
@@ -635,13 +661,14 @@ class MakeSeqWorker(QObject):
     error = Signal()
     finished = Signal()
 
-    def __init__(self, video, start, end, dir, filename):
+    def __init__(self, video, start, end, dir, filename, ext):
         super().__init__()
         self.video = video
         self.start = start
         self.end = end
         self.dir = dir
         self.filename = filename
+        self.ext = ext
         print(self.video)
 
         os.makedirs(dir, exist_ok=True)
@@ -649,19 +676,19 @@ class MakeSeqWorker(QObject):
 
     @Slot()
     def run(self):
-        print("started")
+        print("process start")
         self.video.set(cv2.CAP_PROP_POS_FRAMES, self.start)
         if self.start == self.end:
             ret, frame = self.video.read()
             if ret:
-                cv2.imwrite(f"{self.base}_0001.png", frame)
+                cv2.imwrite(f"{self.base}_0001.{self.ext}", frame)
             else:
                 self.error.emit()
         elif self.start < self.end:
-            for num in range(self.end - self.start):
+            for num in range(int(self.end - self.start)):
                 ret, frame = self.video.read()
                 if ret:
-                    cv2.imwrite(f"{self.base}_{num+1:04}.png", frame)
+                    cv2.imwrite(f"{self.base}_{num+1:04}.{self.ext}", frame)
                     self.progress.emit(num+1)
                 else:
                     self.error.emit()
