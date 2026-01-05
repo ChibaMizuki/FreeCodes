@@ -434,7 +434,7 @@ class downloadThread(QThread):
         except Exception as e:
            self.error.emit(e)
             # QThread内でメッセージボックスなどUIをいじるとエラーが生じる
-            # expected string or bytes-like object, got 'PySide6.QtWidgets.QLineEdit'
+            # 例: expected string or bytes-like object, got 'PySide6.QtWidgets.QLineEdit'
 
 class MakeSeqWindow(QDialog):
     def __init__(self, video_path):
@@ -481,8 +481,8 @@ class MakeSeqWindow(QDialog):
         self.input_end = QSpinBox()
         self.input_end.valueChanged.connect(self.set_max_value)
 
-        self.input_start.setMinimum(0)
-        self.input_start.setValue(0)
+        self.input_start.setMinimum(1)
+        self.input_start.setValue(1)
         self.input_end.setMaximum(int(self.total_frames))
         self.input_end.setValue(int(self.total_frames))
         self.input_start.setMaximum(self.input_end.value())
@@ -535,6 +535,7 @@ class MakeSeqWindow(QDialog):
         self.ext_box = QComboBox()
         self.ext_box.addItem("jpg")
         self.ext_box.addItem("png")
+        self.ext_box.addItem("bmp")
 
         folder_layout.addWidget(QLabel("Path"))
         folder_layout.addSpacing(20)
@@ -553,7 +554,7 @@ class MakeSeqWindow(QDialog):
 
         # 処理状況
         self.status_label = QLabel("Process Status")
-        self.start_label.setAlignment(Qt.AlignCenter)
+        self.status_label.setAlignment(Qt.AlignCenter)
         self.proc_status = QLabel("0 / 0")
         self.proc_status.setAlignment(Qt.AlignCenter)
 
@@ -633,12 +634,13 @@ class MakeSeqWindow(QDialog):
         ext = self.ext_box.currentText()
 
         def show_progress(value):
-            self.proc_status.setText(f"{value} / {end - start}")
+            self.proc_status.setText(f"{value} / {end - start + 1}")
 
         def finished():
-            print("Finished Makeing Sequential Images")
+            QMessageBox.information(self, "Finish", "Finished Makeing Sequential Images")
             self.make_seq_thread.deleteLater()
-        
+            self.close()
+
         def error():
             print("An Error Has Occured")
 
@@ -664,9 +666,8 @@ class MakeSeqWorker(QObject):
     def __init__(self, video, start, end, dir, filename, ext):
         super().__init__()
         self.video = video
-        self.start = start
-        self.end = end
-        self.dir = dir
+        self.start = start - 1 # わかりやすいように1始まりにしてあったものを0始まりに直す
+        self.end = end - 1
         self.filename = filename
         self.ext = ext
         print(self.video)
@@ -685,7 +686,7 @@ class MakeSeqWorker(QObject):
             else:
                 self.error.emit()
         elif self.start < self.end:
-            for num in range(int(self.end - self.start)):
+            for num in range(int(self.end - self.start) + 1):
                 ret, frame = self.video.read()
                 if ret:
                     cv2.imwrite(f"{self.base}_{num+1:04}.{self.ext}", frame)
