@@ -55,7 +55,7 @@ class NoWheelSlider(QSlider):
         e.ignore()
 
 
-class CustamRangeSlider(QRangeSlider):
+class CustomRangeSlider(QRangeSlider):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._bar_moves_all = False
@@ -434,7 +434,9 @@ class downloadThread(QThread):
         def progress_hook(d):
             if d['status'] == 'downloading':
                 # _percent_strはただの文字列じゃなくて装飾文字だから扱える代物じゃなかった
-                percent = int(d['downloaded_bytes'] / d['total_bytes'] * 100)
+                total = d.get("total_bytes") or d.get("total_bytes_estimate")
+                if total:
+                    percent = int(d["downloaded_bytes"] / total * 100)
                 self.progress.emit(percent)
                 self.status.emit("downloading")
             elif d['status'] == 'finished':
@@ -534,7 +536,7 @@ class MakeSeqWindow(QDialog):
         range_layout = QHBoxLayout()
         self.start_label = QLabel("0")
         self.end_label = QLabel(f"{int(round(self.length, 0))}")
-        self.slider = CustamRangeSlider(Qt.Orientation.Horizontal)
+        self.slider = CustomRangeSlider(Qt.Orientation.Horizontal)
         self.slider.valueChanged.connect(self.set_value)
         self.slider.setRange(0, self.total_frames)
         self.slider.setValue((0, self.total_frames))
