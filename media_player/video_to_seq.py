@@ -21,9 +21,11 @@ class MakeSeqWindow(QDialog):
         self.resize(600, 400)
         self.setWindowTitle("Make Sequential Images From Video")
 
-        self.video = cv2.VideoCapture(video_path)
+        self.video_path = video_path
+        self.video = cv2.VideoCapture(self.video_path)
         self.fps = self.video.get(cv2.CAP_PROP_FPS)
         self.total_frames = self.video.get(cv2.CAP_PROP_FRAME_COUNT)
+        self.video.release()
         self.length = self.total_frames / self.fps
 
         layout = QVBoxLayout(self)
@@ -220,7 +222,7 @@ class MakeSeqWindow(QDialog):
         def error():
             print("An Error Has Occured")
 
-        self.worker = MakeSeqWorker(self.video, start, end, output_dir, output_file_name, ext)
+        self.worker = MakeSeqWorker(self.video_path, start, end, output_dir, output_file_name, ext)
         self.make_seq_thread = QThread()
         self.worker.moveToThread(self.make_seq_thread)
 
@@ -239,9 +241,9 @@ class MakeSeqWorker(QObject):
     error = Signal()
     finished = Signal()
 
-    def __init__(self, video, start, end, dir, filename, ext):
+    def __init__(self, video_path, start, end, dir, filename, ext):
         super().__init__()
-        self.video = video
+        self.video = cv2.VideoCapture(video_path)
         self.start = start - 1 # わかりやすいように1始まりにしてあったものを0始まりに直す
         self.end = end - 1
         self.filename = filename
