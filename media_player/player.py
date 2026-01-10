@@ -19,6 +19,7 @@ class VideoPlayer(QMainWindow):
         self.setWindowTitle("PySide6 VLC Player")
         self.resize(1000, 700)
         self.media = None
+        self.hwnd = None
         self.send_filename = None
         self.tmp = None
 
@@ -124,10 +125,12 @@ class VideoPlayer(QMainWindow):
             print(f"filename (abspath): {filename}")
 
         if filename:
+            if not self.hwnd:
+                self.hwnd = int(self.video_frame.winId())
+                self.player.set_hwnd(self.hwnd)
             self.send_filename = filename
             self.media = self.instance.media_new(filename)
             self.player.set_media(self.media)
-            self.player.set_hwnd(self.video_frame.winId())
             self.mute_button.setIcon(self.style().standardIcon(QStyle.SP_MediaVolume))
             self.volume.setValue(50)
             self.player.play()
@@ -138,7 +141,6 @@ class VideoPlayer(QMainWindow):
             self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
             self.slider.setValue(0)
             self.video_to_seq.setEnabled(True)
-            self.seq_to_video.setEnabled(True)
 
     def toggle_play(self):
         state = self.player.get_state()
