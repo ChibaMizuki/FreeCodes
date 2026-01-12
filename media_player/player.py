@@ -1,6 +1,7 @@
 import os
 import vlc
-from PySide6.QtCore import Qt, QTimer
+from vlc import EventType
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QSizePolicy,
@@ -14,6 +15,8 @@ from seq_to_video import MakeVideoWindow
 
 
 class VideoPlayer(QMainWindow):
+    media_ended = Signal()
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("PySide6 VLC Player")
@@ -22,6 +25,11 @@ class VideoPlayer(QMainWindow):
         self.hwnd = None
         self.send_filename = None
         self.tmp = None
+        self.play_playlist = False
+        self.playlist = []
+        self.current_index = 0
+
+        self.media_ended.connect(self.end_check)
 
         self.dl_window = DownloadWindow()
         self.dl_window.hide()
@@ -113,7 +121,9 @@ class VideoPlayer(QMainWindow):
 
         self.end_check_timer = QTimer()
         self.end_check_timer.setInterval(100)
-        self.end_check_timer.timeout.connect(self.end_check)
+        # self.end_check_timer.timeout.connect(self.end_check)
+        self.event_manager = self.player.event_manager()
+        self.event_manager.event_attach(EventType.MediaPlayerEndReached, self.media_end_event)
         
     # 動画表示
     def open_file(self, fn=None, *args, **kwargs):
@@ -129,16 +139,18 @@ class VideoPlayer(QMainWindow):
                 self.hwnd = int(self.video_frame.winId())
                 self.player.set_hwnd(self.hwnd)
             self.send_filename = filename
+            self.play_playlist = False
             self.media = self.instance.media_new(filename)
             self.player.set_media(self.media)
-            self.mute_button.setIcon(self.style().standardIcon(QStyle.SP_MediaVolume))
-            self.volume.setValue(50)
-            self.player.play()
             self.mute = False
             self.player.audio_set_mute(False)
+            self.player.audio_set_volume(50)
+            self.player.play()
             self.timer.start()
             self.end_check_timer.start()
+            self.mute_button.setIcon(self.style().standardIcon(QStyle.SP_MediaVolume))
             self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+            self.volume.setValue(50)
             self.slider.setValue(0)
             self.video_to_seq.setEnabled(True)
 
@@ -197,6 +209,9 @@ class VideoPlayer(QMainWindow):
         self.player.set_position(value)
         self.timer.start()
 
+    def media_end_event(self, event):
+        self.media_ended.emit()
+
     def end_check(self):
         if self.player.get_state() == vlc.State.Ended:
             self.player.set_media(self.media)
@@ -212,6 +227,12 @@ class VideoPlayer(QMainWindow):
         self.clean_temp_file()
         self.tmp = path
         self.open_file(fn=self.tmp)
+    
+    def next(self):
+        pass
+
+    def previous(self):
+        pass
 
     def clean_temp_file(self):
         if self.player:
