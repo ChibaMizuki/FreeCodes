@@ -4,15 +4,23 @@ import vlc
 from vlc import EventType
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QLabel, QSizePolicy,
-    QStyle, QFileDialog, QMenuBar
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QPushButton,
+    QLabel,
+    QSizePolicy,
+    QStyle,
+    QFileDialog,
+    QMenuBar,
 )
 
 from custom_widgets import NoWheelSlider
 from download import DownloadWindow
 from video_to_seq import MakeSeqWindow
 from seq_to_video import MakeVideoWindow
+from playlist import MakePlaylist
 
 
 class VideoPlayer(QMainWindow):
@@ -22,13 +30,12 @@ class VideoPlayer(QMainWindow):
         super().__init__()
         self.setWindowTitle("PySide6 VLC Player")
         self.resize(1000, 700)
-        self.setAcceptDrops(True)
         self.media = None
         self.hwnd = None
         self.send_filename = None
         self.tmp = None
         self.loop = True
-        self.play_playlist = False
+        self.is_playlist = False
         self.playlist = []
         self.current_index = 0
 
@@ -43,6 +50,9 @@ class VideoPlayer(QMainWindow):
         self.make_video.hide()
         self.make_video.temp_video.connect(self.temp_video_process)
         self.make_video.saved_video.connect(self.open_file)
+        self.make_playlist = MakePlaylist()
+        self.make_playlist.hide()
+        self.make_playlist.new_playlist.connect(self.play_playlist)
 
         # VLC初期化
         self.instance = vlc.Instance()
@@ -70,7 +80,8 @@ class VideoPlayer(QMainWindow):
         seq_to_video = seq.addAction("インポート")
         seq_to_video.triggered.connect(lambda: self.make_video.show())
         playlist = file.addMenu("プレイリスト")
-        make = playlist.addAction("作成")
+        make = playlist.addAction("編集")
+        make.triggered.connect(self.edit_playlist)
         play = playlist.addAction("再生")
         play.triggered.connect(self.open_playlist)
 
@@ -145,7 +156,7 @@ class VideoPlayer(QMainWindow):
         if filename:
             self.set_video(filename)
             self.send_filename = filename
-            self.play_playlist = False
+            self.is_playlist = False
 
     def set_video(self, filename):
         if not self.hwnd:
@@ -224,7 +235,7 @@ class VideoPlayer(QMainWindow):
         self.media_ended.emit()
 
     def end_check(self):
-        if self.play_playlist:
+        if self.is_playlist:
             self.next()
         else:
             self.player.set_media(self.media)
@@ -242,25 +253,36 @@ class VideoPlayer(QMainWindow):
         self.tmp = path
         self.open_file(fn=self.tmp)
 
+    def edit_playlist(self):
+        if self.player.is_playing():
+            self.player.pause()
+        self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        self.make_playlist.get_playlist(self.playlist)
+        self.make_playlist.show()
+
+    def play_playlist(self, playlist):
+        print("playlist")
+        print(playlist)
+        self.playlist = playlist
+        self.current_index = 0
+        self.send_filename = self.playlist[0]
+        self.set_video(self.playlist[0])
+        self.is_playlist = True
+
     def open_playlist(self):
         playlist, _ = QFileDialog.getOpenFileName(self, "Choose Playlist", filter="csv (*.csv)")
         if playlist:
-            with open(playlist, encoding="UTF-8") as f:
+            self.playlist = []
+            with open(playlist, encoding="UTF-8", newline="") as f:
                 reader = csv.reader(f)
                 for video in reader:
-                    self.playlist = video
-                    print(self.playlist)
-
-            self.current_index = 0
-            self.send_filename = self.playlist[0]
-            self.set_video(self.playlist[0])
-            self.play_playlist = True
-
-    def make_playlist(self):
-        pass
+                    if video and os.path.exists(video[0]):
+                        self.playlist.append(video[0])
+            
+            self.play_playlist(self.playlist)
     
     def next(self):
-        if not self.play_playlist:
+        if not self.is_playlist:
             return
         self.current_index += 1
         if self.current_index >= len(self.playlist):
@@ -269,7 +291,7 @@ class VideoPlayer(QMainWindow):
         self.set_video(self.playlist[self.current_index])
 
     def previous(self):
-        if not self.play_playlist:
+        if not self.is_playlist:
             return
         self.current_index -= 1
         if self.current_index < 0:
@@ -296,3 +318,4 @@ class VideoPlayer(QMainWindow):
         self.dl_window.close()
         self.make_seq.close()
         self.make_video.close()
+        self.make_playlist.close()

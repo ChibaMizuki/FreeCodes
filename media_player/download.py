@@ -2,9 +2,16 @@ import os
 import yt_dlp
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QLineEdit, QMessageBox,
-    QProgressBar, QCheckBox, QFileDialog
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QLineEdit,
+    QMessageBox,
+    QProgressBar,
+    QCheckBox,
+    QFileDialog,
 )
 
 from constants import USER_DOWNLOAD_FOLDER

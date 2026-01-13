@@ -4,9 +4,16 @@ import tempfile
 import cv2
 from PySide6.QtCore import Qt, QObject, QThread, Signal, Slot
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QLineEdit, QRadioButton,
-    QSpinBox, QFileDialog, QMessageBox
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QLineEdit,
+    QRadioButton,
+    QSpinBox,
+    QFileDialog,
+    QMessageBox,
 )
 
 from constants import USER_DOWNLOAD_FOLDER
@@ -28,7 +35,7 @@ class MakeVideoWindow(QDialog):
         self.path_layout = QVBoxLayout()
         self.image_path_layout = QHBoxLayout()
 
-        self.exp_label = QLabel("対応形式は以下のみです\n filename_0000.jpg, .png, .bmp")
+        self.exp_label = QLabel("対応形式\n filename_0000.jpg, .png, .bmp")
         self.exp_label.setAlignment(Qt.AlignCenter)
         self.image_path = QLineEdit()
         self.image_path.setReadOnly(True)

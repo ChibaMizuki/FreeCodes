@@ -2,10 +2,17 @@ import os
 import cv2
 from PySide6.QtCore import Qt ,QObject, QThread, Signal, Slot
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QRadioButton, QSpinBox,
-    QLineEdit, QFileDialog, QMessageBox,
-    QComboBox
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QRadioButton,
+    QSpinBox,
+    QLineEdit,
+    QFileDialog,
+    QMessageBox,
+    QComboBox,
 )
 
 from constants import USER_DOWNLOAD_FOLDER
