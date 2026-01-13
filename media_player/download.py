@@ -33,14 +33,14 @@ class DownloadWindow(QDialog):
         video_url_layout.addWidget(self.video_url)
         video_url_layout.addSpacing(10)
 
-        clear_button = QPushButton("clear")
+        clear_button = QPushButton("クリア")
         clear_button.setMaximumWidth(80)
         clear_button.clicked.connect(lambda: self.video_url.clear())
 
         # 保存先設定
         save_path_layout = QHBoxLayout()
 
-        path_label = QLabel("PATH")
+        path_label = QLabel("保存先")
         save_path_layout.addWidget(path_label)
 
         # 内部でパス保持する方の変数
@@ -52,24 +52,24 @@ class DownloadWindow(QDialog):
         save_path_layout.addWidget(self.dl_path)
         save_path_layout.addSpacing(10)
 
-        select_button = QPushButton("select")
+        select_button = QPushButton("選択")
         select_button.clicked.connect(self.select_folder)
         save_path_layout.addWidget(select_button)
         save_path_layout.addSpacing(10)
 
         # ダウンロードボタン
-        dl_button = QPushButton("download")
+        dl_button = QPushButton("ダウンロード")
         dl_button.clicked.connect(self.download)
 
         # 確認チェックボックス
-        self.open_after_download = QCheckBox("Open The Video File After Downloading")
+        self.open_after_download = QCheckBox("ダウンロード後に動画を再生する")
 
         # 進捗表示
         progress_layout = QVBoxLayout()
 
-        self.progress_status = QLabel("Waiting")
+        self.progress_status = QLabel("待機中")
         self.progress_status.setAlignment(Qt.AlignCenter)
-        self.progress_text = QLabel("Download Status")
+        self.progress_text = QLabel("ダウンロード状況")
         self.progress_text.setAlignment(Qt.AlignCenter)
         progress_layout.addWidget(self.progress_text)
         progress_layout.addWidget(self.progress_status)
@@ -102,9 +102,9 @@ class DownloadWindow(QDialog):
 
     def download(self):
         if not self.video_url.text():
-            QMessageBox.warning(self, "error", "Please Input URL")
+            QMessageBox.warning(self, "error", "URLを入力してください")
         if not self.folder_path:
-            QMessageBox.warning(self, "error", "Please Input Folder Path")
+            QMessageBox.warning(self, "error", "保存先を設定してください")
         
         os.makedirs(self.folder_path, exist_ok=True)
         
@@ -118,21 +118,21 @@ class DownloadWindow(QDialog):
 
     def show_messege(self, mes=None):
         if mes != None:
-            QMessageBox.warning(self, "error", f"Failed to Download\n{mes}")
+            QMessageBox.warning(self, "error", f"ダウンロード失敗\n{mes}")
         else:
-            QMessageBox.information(self, "success", "Finish Download")
+            QMessageBox.information(self, "success", "ダウンロード終了")
 
     def update_status_message(self, status):
         if status == "started":
-            self.progress_status.setText("Preparing for Download")
+            self.progress_status.setText("ダウンロード準備中")
         elif status == "downloading":
-            self.progress_status.setText("Download in Progress")
+            self.progress_status.setText("ダウンロード中")
         elif status == "finished":
-            self.progress_status.setText("Download Finished")
+            self.progress_status.setText("Dダウンロード完了")
 
     def reset_status_message(self, fn):
         print(f"filename at dialog: {fn}")
-        self.progress_status.setText("Waiting")
+        self.progress_status.setText("待機中")
         self.progress_bar.setValue(0)
         if self.open_after_download.isChecked():
             self.video.emit(fn)
