@@ -44,13 +44,13 @@ class MakeSeqWindow(QDialog):
         # ラジオボタン
         radio_layout = QVBoxLayout()
         custam_layout = QHBoxLayout()
-        self.radio_seconds = QRadioButton("seconds")
+        self.radio_seconds = QRadioButton("秒数指定")
         self.radio_seconds.clicked.connect(self.radio_clicked)
-        self.radio_frames = QRadioButton("frames")
+        self.radio_frames = QRadioButton("フレーム指定")
         self.radio_frames.clicked.connect(self.radio_clicked)
-        self.radio_all = QRadioButton("All")
+        self.radio_all = QRadioButton("全体")
         self.radio_all.clicked.connect(self.radio_clicked)
-        self.radio_custam = QRadioButton("Custam")
+        self.radio_custam = QRadioButton("入力指定")
         self.radio_custam.clicked.connect(self.radio_clicked)
         self.radio_seconds.setChecked(True)
 
@@ -69,7 +69,7 @@ class MakeSeqWindow(QDialog):
         self.input_start.setEnabled(False)
         self.input_end.setEnabled(False)
 
-        radio_layout.addWidget(QLabel("\nPlease Select a Creation Method"))
+        radio_layout.addWidget(QLabel("\n出力方法を指定"))
         radio_layout.addWidget(self.radio_seconds)
         radio_layout.addWidget(self.radio_frames)
         radio_layout.addWidget(self.radio_all)
@@ -106,7 +106,7 @@ class MakeSeqWindow(QDialog):
         self.download_folder = USER_DOWNLOAD_FOLDER
         self.dl_path = QLineEdit(self.download_folder)
         self.dl_path.setReadOnly(True)
-        select_button = QPushButton("select")
+        select_button = QPushButton("選択")
         select_button.clicked.connect(self.select_folder)
         self.seq_name = QLineEdit("output")
 
@@ -115,13 +115,13 @@ class MakeSeqWindow(QDialog):
         self.ext_box.addItem("png")
         self.ext_box.addItem("bmp")
 
-        folder_layout.addWidget(QLabel("Path"))
+        folder_layout.addWidget(QLabel("保存先"))
         folder_layout.addSpacing(20)
         folder_layout.addWidget(self.dl_path)
         folder_layout.addSpacing(20)
         folder_layout.addWidget(select_button)
 
-        save_layout.addWidget(QLabel("File Name"))
+        save_layout.addWidget(QLabel("ファイル名"))
         save_layout.addSpacing(20)
         save_layout.addWidget(self.seq_name)
         save_layout.addSpacing(20)
@@ -131,14 +131,14 @@ class MakeSeqWindow(QDialog):
         save_layout.addStretch()
 
         # 処理状況
-        self.status_label = QLabel("Process Status")
+        self.status_label = QLabel("進捗状況")
         self.status_label.setAlignment(Qt.AlignCenter)
         self.proc_status = QLabel("0 / 0")
         self.proc_status.setAlignment(Qt.AlignCenter)
 
         # 処理開始ボタン
         button_layout = QHBoxLayout()
-        start_button = QPushButton("start")
+        start_button = QPushButton("開始")
         start_button.clicked.connect(self.make_seq_images)
         button_layout.addStretch()
         button_layout.addWidget(start_button)
@@ -215,7 +215,7 @@ class MakeSeqWindow(QDialog):
             self.proc_status.setText(f"{int(value)} / {int(end - start + 1)}")
 
         def finished():
-            QMessageBox.information(self, "Finish", "Finished Makeing Sequential Images")
+            QMessageBox.information(self, "Finish", "出力終了")
             self.make_seq_thread.deleteLater()
             self.close()
 

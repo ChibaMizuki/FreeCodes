@@ -28,17 +28,17 @@ class MakeVideoWindow(QDialog):
         self.path_layout = QVBoxLayout()
         self.image_path_layout = QHBoxLayout()
 
-        self.exp_label = QLabel("Supports only the format\n filename_0000.jpg, .png, .bmp")
+        self.exp_label = QLabel("対応形式は以下のみです\n filename_0000.jpg, .png, .bmp")
         self.exp_label.setAlignment(Qt.AlignCenter)
         self.image_path = QLineEdit()
         self.image_path.setReadOnly(True)
-        self.image_folder_button = QPushButton("select")
+        self.image_folder_button = QPushButton("選択")
         self.image_folder_button.clicked.connect(self.select_image_folder)
 
 
         self.path_layout.addWidget(self.exp_label)
         self.path_layout.addSpacing(20)
-        self.image_path_layout.addWidget(QLabel("Image Path"))
+        self.image_path_layout.addWidget(QLabel("画像フォルダ"))
         self.image_path_layout.addSpacing(20)
         self.image_path_layout.addWidget(self.image_path)
         self.image_path_layout.addStretch()
@@ -48,9 +48,9 @@ class MakeVideoWindow(QDialog):
         # 生成形式
         self.radio_layout = QVBoxLayout()
 
-        self.radio_play_only = QRadioButton("Only Play")
-        self.radio_save_only = QRadioButton("Only Save")
-        self.radio_save_and_play = QRadioButton("Save and Play")
+        self.radio_play_only = QRadioButton("再生のみ")
+        self.radio_save_only = QRadioButton("保存のみ")
+        self.radio_save_and_play = QRadioButton("保存＆再生")
         self.radio_save_and_play.setChecked(True)
 
         self.radio_layout.addWidget(self.radio_play_only)
@@ -64,17 +64,17 @@ class MakeVideoWindow(QDialog):
 
         self.input_folder_path = QLineEdit(self.folder_path)
         self.input_folder_path.setReadOnly(True)
-        self.select_button = QPushButton("select")
+        self.select_button = QPushButton("選択")
         self.select_button.clicked.connect(self.select_save_folder)
         self.save_filename_input = QLineEdit()
 
-        self.folder_layout.addWidget(QLabel("Save Path"))
+        self.folder_layout.addWidget(QLabel("保存先"))
         self.folder_layout.addSpacing(20)
         self.folder_layout.addWidget(self.input_folder_path)
         self.folder_layout.addStretch()
         self.folder_layout.addWidget(self.select_button)
 
-        self.filename_layout.addWidget(QLabel("Save Filename"))
+        self.filename_layout.addWidget(QLabel("保存ファイル名"))
         self.filename_layout.addSpacing(20)
         self.filename_layout.addWidget(self.save_filename_input)
         self.filename_layout.addStretch()
@@ -97,7 +97,7 @@ class MakeVideoWindow(QDialog):
         # 変換状況
         self.status_layout = QVBoxLayout()
 
-        self.status_label = QLabel("Conversion Processing Status")
+        self.status_label = QLabel("変換状況")
         self.status_label.setAlignment(Qt.AlignCenter)
         self.process_label = QLabel("0 / 0")
         self.process_label.setAlignment(Qt.AlignCenter)
@@ -105,7 +105,7 @@ class MakeVideoWindow(QDialog):
         self.status_layout.addWidget(self.process_label)
 
         # スタートボタン
-        self.start_button = QPushButton("start")
+        self.start_button = QPushButton("開始")
         self.start_button.clicked.connect(self.make_video)
 
         layout.addLayout(self.path_layout)
@@ -150,7 +150,7 @@ class MakeVideoWindow(QDialog):
             self.process_label.setText(f"{value} / {len(file)}")
         
         def finished():
-            QMessageBox.information(self, "Finish", "Finish Making Video")
+            QMessageBox.information(self, "Finish", "完了")
             self.make_video_thread.deleteLater()
             if self.radio_save_and_play.isChecked():
                 self.saved_video.emit(save_path)
@@ -159,10 +159,10 @@ class MakeVideoWindow(QDialog):
             self.close()
 
         if self.image_path.text() == "":
-            QMessageBox.warning(self, "Path error", "Please Input Image Path")
+            QMessageBox.warning(self, "Path error", "画像が入っているフォルダを選択してください")
             return
         if self.radio_save_and_play.isChecked() and self.save_filename_input.text() == "":
-            QMessageBox.warning(self, "Filename error", "Please Input Filename")
+            QMessageBox.warning(self, "Filename error", "保存先ファイル名を入力してください")
             return
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         files = get_images()

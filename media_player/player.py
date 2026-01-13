@@ -1,4 +1,5 @@
 import os
+import csv
 import vlc
 from vlc import EventType
 from PySide6.QtCore import Qt, QTimer, Signal
@@ -57,17 +58,21 @@ class VideoPlayer(QMainWindow):
         # メニューバー
         menu_bar = QMenuBar(self)
 
-        file = menu_bar.addMenu("file")
-        file_open = file.addAction("open file")
+        file = menu_bar.addMenu("ファイル")
+        file_open = file.addAction("開く")
         file_open.triggered.connect(self.open_file)
-        self.video_to_seq = file.addAction("Sequential output")
+        seq = file.addMenu("連番画像")
+        self.video_to_seq = file.addAction("エクスポート")
         self.video_to_seq.setDisabled(True)
         self.video_to_seq.triggered.connect(self.open_make_seq_window)
-        self.seq_to_video = file.addAction("Convert sequential images to video")
-        self.seq_to_video.triggered.connect(lambda: self.make_video.show())
+        seq_to_video = file.addAction("インポート")
+        seq_to_video.triggered.connect(lambda: self.make_video.show())
+        playlist = file.addMenu("プレイリスト")
+        make = playlist.addAction("作成")
+        play = playlist.addAction("再生")
 
         dl = menu_bar.addMenu("yt_dlp")
-        download = dl.addAction("download")
+        download = dl.addAction("ダウンロード")
         download.triggered.connect(lambda: self.dl_window.show())
         self.setMenuBar(menu_bar)
         
@@ -209,6 +214,7 @@ class VideoPlayer(QMainWindow):
         self.player.set_position(value)
         self.timer.start()
 
+    # イベントハンドラ内でvlc関連の処理をするとlibvlcエラーが起きてフリーズする
     def media_end_event(self, event):
         self.media_ended.emit()
 
@@ -227,6 +233,9 @@ class VideoPlayer(QMainWindow):
         self.clean_temp_file()
         self.tmp = path
         self.open_file(fn=self.tmp)
+
+    def open_playlist(self):
+        pass
     
     def next(self):
         pass
