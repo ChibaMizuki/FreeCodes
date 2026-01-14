@@ -261,8 +261,7 @@ class VideoPlayer(QMainWindow):
         self.make_playlist.show()
 
     def play_playlist(self, playlist):
-        print("playlist")
-        print(playlist)
+        print(f"playlist is {playlist}")
         self.playlist = playlist
         self.current_index = 0
         self.send_filename = self.playlist[0]
