@@ -1,5 +1,6 @@
 import os
 import csv
+from PySide6.QtGui import QDrag, QCursor
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QDialog,
@@ -13,7 +14,6 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
 )
 
-from constants import USER_DOWNLOAD_FOLDER
 
 class MakePlaylist(QDialog):
     new_playlist = Signal(list)
@@ -31,6 +31,7 @@ class MakePlaylist(QDialog):
         # ファイル表示
         self.video_list = VideoList()
         self.video_list.add.connect(self.add_playlist)
+        self.video_list.remove.connect(self.sync_playlist)
 
         # ボタン
         button_layout = QHBoxLayout()
@@ -68,6 +69,7 @@ class MakePlaylist(QDialog):
             self.update_playlist()
 
     def update_playlist(self):
+        self.video_list.clear()
         for v in self.playlist:
             title = os.path.basename(v).split('.')[0]
             item = QListWidgetItem(title)
@@ -87,8 +89,9 @@ class MakePlaylist(QDialog):
         filename, _ = QFileDialog.getSaveFileName(self, "Save", filter="csv (*.csv)")
         if filename:
             with open(filename, mode="w", newline="", encoding="UTF-8") as f:
-                writer = csv.writer(f, delimiter="\n")
-                writer.writerow(self.playlist)
+                writer = csv.writer(f)
+                for p in self.playlist:
+                    writer.writerow([p])
     
     def send_playlist(self):
         self.sync_playlist()
@@ -119,6 +122,7 @@ class MakePlaylist(QDialog):
 
 class VideoList(QListWidget):
     add = Signal(str)
+    remove = Signal()
 
     def __init__(self):
         super().__init__()
@@ -143,9 +147,34 @@ class VideoList(QListWidget):
 
     def dropEvent(self, event):
         if event.mimeData().hasUrls():
-            url = event.mimeData().urls()
-            local_url = url[0].toLocalFile()
-            self.add.emit(local_url)
+            for url in event.mimeData().urls():
+                local_url = url.toLocalFile()
+                self.add.emit(local_url)
             event.accept()
         else:
             super().dropEvent(event)
+
+    def startDrag(self, supportedActions):
+        item = self.currentItem()
+        if not item:
+            return
+
+        # 親クラスのドラッグ処理（ドロップされるまでここで止まる）
+        super().startDrag(supportedActions)
+
+        # --- 判定処理を座標ベースに変更 ---
+        
+        # 1. マウスの現在のグローバル座標を取得
+        global_pos = QCursor.pos()
+        
+        # 2. ウィジェット内（このQListWidget）の座標系に変換
+        local_pos = self.mapFromGlobal(global_pos)
+
+        # 3. 自分の領域（rect）にその座標が含まれているかチェック
+        if not self.rect().contains(local_pos):
+            # 枠外なら削除処理
+            row = self.row(item)
+            if row != -1: # アイテムがまだ存在する場合
+                print(row)
+                self.takeItem(row)
+                self.remove.emit()
