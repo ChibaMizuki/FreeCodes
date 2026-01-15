@@ -44,7 +44,7 @@ class VideoPlayer(QMainWindow):
         self.dl_window = DownloadWindow()
         self.dl_window.hide()
         self.dl_window.video.connect(self.open_file)
-        self.make_seq = MakeSeqWindow(video_path=None)
+        self.make_seq = MakeSeqWindow()
         self.make_seq.hide()
         self.make_video = MakeVideoWindow()
         self.make_video.hide()
@@ -116,7 +116,7 @@ class VideoPlayer(QMainWindow):
         self.volume = NoWheelSlider(Qt.Horizontal)
         self.volume.setRange(0, 100)
         self.volume.setValue(50)
-        self.volume.valueChanged.connect(self.set_volum)
+        self.volume.valueChanged.connect(self.set_volume)
 
         # レイアウト合体
         # 動画描画画面とその下で垂直分割
@@ -186,7 +186,7 @@ class VideoPlayer(QMainWindow):
             self.player.play()
             self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
 
-    def set_volum(self, value):
+    def set_volume(self, value):
         self.player.audio_set_volume(value)
 
     def set_mute(self):
@@ -245,7 +245,7 @@ class VideoPlayer(QMainWindow):
             self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
 
     def open_make_seq_window(self):
-        self.make_seq = MakeSeqWindow(self.send_filename)
+        self.make_seq.get_video_path(self.send_filename)
         self.make_seq.show()
 
     def temp_video_process(self, path):

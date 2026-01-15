@@ -20,45 +20,34 @@ from custom_widgets import CustomRangeSlider
 
 
 class MakeSeqWindow(QDialog):
-    def __init__(self, video_path):
+    def __init__(self):
         super().__init__()
-        if not video_path:
-            return
-
         self.resize(600, 400)
         self.setWindowTitle("Make Sequential Images From Video")
-
-        self.video_path = video_path
-        self.video = cv2.VideoCapture(self.video_path)
-        self.fps = self.video.get(cv2.CAP_PROP_FPS)
-        self.total_frames = self.video.get(cv2.CAP_PROP_FRAME_COUNT)
-        self.video.release()
-        self.length = self.total_frames / self.fps
 
         layout = QVBoxLayout(self)
 
         # 動画情報
         video_info_layout = QHBoxLayout()
-        fps_label = QLabel(f"fps: {round(self.fps, 2)}")
-        frames_label = QLabel(f"frame: {int(self.total_frames)}")
-        length_label = QLabel(f"length: {round(self.length, 2)}s")
+        self.fps_label = QLabel(f"fps: ")
+        self.frames_label = QLabel(f"frame: ")
+        self.length_label = QLabel(f"length: ")
 
-
-        video_info_layout.addWidget(fps_label)
-        video_info_layout.addWidget(frames_label)
-        video_info_layout.addWidget(length_label)
+        video_info_layout.addWidget(self.fps_label)
+        video_info_layout.addWidget(self.frames_label)
+        video_info_layout.addWidget(self.length_label)
 
         # ラジオボタン
         radio_layout = QVBoxLayout()
-        custam_layout = QHBoxLayout()
+        custom_layout = QHBoxLayout()
         self.radio_seconds = QRadioButton("秒数指定")
         self.radio_seconds.clicked.connect(self.radio_clicked)
         self.radio_frames = QRadioButton("フレーム指定")
         self.radio_frames.clicked.connect(self.radio_clicked)
         self.radio_all = QRadioButton("全体")
         self.radio_all.clicked.connect(self.radio_clicked)
-        self.radio_custam = QRadioButton("入力指定")
-        self.radio_custam.clicked.connect(self.radio_clicked)
+        self.radio_custom = QRadioButton("入力指定")
+        self.radio_custom.clicked.connect(self.radio_clicked)
         self.radio_seconds.setChecked(True)
 
         self.input_start = QSpinBox()
@@ -68,8 +57,6 @@ class MakeSeqWindow(QDialog):
 
         self.input_start.setMinimum(1)
         self.input_start.setValue(1)
-        self.input_end.setMaximum(int(self.total_frames))
-        self.input_end.setValue(int(self.total_frames))
         self.input_start.setMaximum(self.input_end.value())
         self.input_end.setMinimum(self.input_start.value())
 
@@ -80,24 +67,22 @@ class MakeSeqWindow(QDialog):
         radio_layout.addWidget(self.radio_seconds)
         radio_layout.addWidget(self.radio_frames)
         radio_layout.addWidget(self.radio_all)
-        custam_layout.addWidget(self.radio_custam)
-        custam_layout.addStretch()
-        custam_layout.addWidget(self.input_start)
-        custam_layout.addSpacing(20)
-        custam_layout.addWidget(QLabel("to"))
-        custam_layout.addSpacing(20)
-        custam_layout.addWidget(self.input_end)
-        custam_layout.addStretch()
-        radio_layout.addLayout(custam_layout)
+        custom_layout.addWidget(self.radio_custom)
+        custom_layout.addStretch()
+        custom_layout.addWidget(self.input_start)
+        custom_layout.addSpacing(20)
+        custom_layout.addWidget(QLabel("to"))
+        custom_layout.addSpacing(20)
+        custom_layout.addWidget(self.input_end)
+        custom_layout.addStretch()
+        radio_layout.addLayout(custom_layout)
 
         # 開始と終了
         range_layout = QHBoxLayout()
         self.start_label = QLabel("0")
-        self.end_label = QLabel(f"{int(round(self.length, 0))}")
+        self.end_label = QLabel("")
         self.slider = CustomRangeSlider(Qt.Orientation.Horizontal)
         self.slider.valueChanged.connect(self.set_value)
-        self.slider.setRange(0, self.total_frames)
-        self.slider.setValue((0, self.total_frames))
         self.slider.show()
 
         range_layout.addWidget(self.start_label)
@@ -145,10 +130,10 @@ class MakeSeqWindow(QDialog):
 
         # 処理開始ボタン
         button_layout = QHBoxLayout()
-        start_button = QPushButton("開始")
-        start_button.clicked.connect(self.make_seq_images)
+        self.start_button = QPushButton("開始")
+        self.start_button.clicked.connect(self.make_seq_images)
         button_layout.addStretch()
-        button_layout.addWidget(start_button)
+        button_layout.addWidget(self.start_button)
         button_layout.addStretch()
 
         layout.addLayout(video_info_layout)
@@ -162,6 +147,28 @@ class MakeSeqWindow(QDialog):
         layout.addWidget(self.proc_status)
         layout.addLayout(button_layout)
 
+    def get_video_path(self, video_path):
+        self.video_path = video_path
+        if self.video_path:
+            self.video = cv2.VideoCapture(self.video_path)
+            self.fps = self.video.get(cv2.CAP_PROP_FPS)
+            self.total_frames = self.video.get(cv2.CAP_PROP_FRAME_COUNT)
+            self.video.release()
+            self.length = self.total_frames / self.fps
+
+            # UI更新
+            self.start_button.setEnabled(True)
+            self.fps_label.setText(f"fps: {round(self.fps, 2)}")
+            self.frames_label.setText(f"frame: {int(self.total_frames)}")
+            self.length_label.setText(f"length: {round(self.length, 2)}s")
+            self.input_end.setMaximum(int(self.total_frames))
+            self.input_end.setValue(int(self.total_frames))
+            self.end_label.setText(f"{int(round(self.length, 0))}")
+            self.slider.setRange(0, self.total_frames)
+            self.slider.setValue((0, self.total_frames))
+        else:
+            self.start_button.setEnabled(False)
+
     def set_value(self, value):
         if self.radio_seconds.isChecked():
             self.start_label.setText(str(int(round((value[0]/ self.fps), 0))))
@@ -169,7 +176,7 @@ class MakeSeqWindow(QDialog):
         elif self.radio_frames.isChecked():
             self.start_label.setText(str(int(value[0])))
             self.end_label.setText(str(int(value[1])))
-        elif self.radio_frames.isChecked() or self.radio_custam.isChecked():
+        elif self.radio_frames.isChecked() or self.radio_custom.isChecked():
             pass
 
     def set_max_value(self):
@@ -193,7 +200,7 @@ class MakeSeqWindow(QDialog):
             self.input_start.setEnabled(False)
             self.input_end.setEnabled(False)
             self.slider.setEnabled(False)
-        elif self.radio_custam.isChecked():
+        elif self.radio_custom.isChecked():
             self.input_start.setEnabled(True)
             self.input_end.setEnabled(True)
             self.slider.setEnabled(False)
@@ -208,7 +215,7 @@ class MakeSeqWindow(QDialog):
         if self.radio_all.isChecked():
             start = 1
             end = self.total_frames
-        elif self.radio_custam.isChecked():
+        elif self.radio_custom.isChecked():
             start = self.input_start.value()
             end = self.input_end.value()
         else:
