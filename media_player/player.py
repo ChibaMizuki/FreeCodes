@@ -1,5 +1,6 @@
 import os
 import csv
+import random
 import vlc
 from vlc import EventType
 from PySide6.QtCore import Qt, QTimer, Signal
@@ -25,6 +26,7 @@ from playlist import MakePlaylist
 
 class VideoPlayer(QMainWindow):
     media_ended = Signal()
+    shuffle = Signal(bool)
 
     def __init__(self):
         super().__init__()
@@ -37,9 +39,11 @@ class VideoPlayer(QMainWindow):
         self.loop = True
         self.is_playlist = False
         self.playlist = []
+        self.original_playlist = []
         self.current_index = 0
 
         self.media_ended.connect(self.end_check)
+        self.shuffle.connect(self.set_shuffled_playlist)
 
         self.dl_window = DownloadWindow()
         self.dl_window.hide()
@@ -89,6 +93,12 @@ class VideoPlayer(QMainWindow):
         download = dl.addAction("ダウンロード")
         download.triggered.connect(lambda: self.dl_window.show())
         self.setMenuBar(menu_bar)
+
+        settings = menu_bar.addMenu("設定")
+        self.play_shuffle = settings.addAction("シャッフル再生")
+        self.play_shuffle.toggled.connect(self.toggle_shuffle)
+        self.play_shuffle.setCheckable(True)
+        self.play_shuffle.setChecked(False)
         
         # 再生ボタン
         self.play_button = QPushButton(self.style().standardIcon(QStyle.SP_MediaPlay), "")
@@ -229,6 +239,27 @@ class VideoPlayer(QMainWindow):
             value = 0.99 # 終了判定を巻き込まないために
         self.player.set_position(value)
         self.timer.start()
+    
+    def toggle_shuffle(self, checked):
+        if not self.playlist or not self.is_playlist:
+            return
+        
+        self.shuffle.emit(checked)
+
+    def set_shuffled_playlist(self, checked):
+        print(f"shuffle: {checked}")
+        if checked:
+            self.current_index = 0
+            self.is_playlist = True
+            self.playlist = random.sample(self.original_playlist, len(self.original_playlist))
+            self.send_filename = self.playlist[0]
+            self.set_video(self.playlist[0])
+        else:
+            self.current_index = 0
+            self.is_playlist = True
+            self.playlist = self.original_playlist
+            self.send_filename = self.playlist[0]
+            self.set_video(self.playlist[0])
 
     # イベントハンドラ内でvlc関連の処理をするとlibvlcエラーが起きてフリーズする
     def media_end_event(self, event):
@@ -261,11 +292,12 @@ class VideoPlayer(QMainWindow):
         self.make_playlist.show()
 
     def play_playlist(self, playlist):
-        print(f"playlist is {playlist}")
         self.playlist = playlist
+        self.original_playlist = playlist
         self.current_index = 0
         self.send_filename = self.playlist[0]
         self.set_video(self.playlist[0])
+        self.play_shuffle.setChecked(False)
         self.is_playlist = True
 
     def open_playlist(self):

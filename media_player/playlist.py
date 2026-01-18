@@ -82,7 +82,6 @@ class MakePlaylist(QDialog):
 
     def export_playlist(self):
         self.sync_playlist()
-        print(f"export the playlist {self.playlist}")
         if not self.playlist:
             QMessageBox.warning(self, "No Playlist", "プレイリストがありません")
             return
@@ -108,7 +107,6 @@ class MakePlaylist(QDialog):
             path = item.data(Qt.UserRole)
             new_list.append(path)
         self.playlist = new_list
-        print(f"sync playlist is {self.playlist}")
 
     def add_playlist(self, video):
         if video in self.playlist:
