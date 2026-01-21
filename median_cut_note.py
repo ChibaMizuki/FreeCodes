@@ -10,8 +10,8 @@ if img is None:
 img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
 # # 要素の取得の例
-py_array = [[[ 30, 249,   0], [240, 120,  24], [ 39, 100, 140]], 
-            [[222, 220, 255], [ 30, 128,  99], [180, 181, 182]],
+py_array = [[[ 30, 128,  99], [240, 120,  24], [ 39, 100, 140]], 
+            [[222, 220, 255], [ 30, 128,   2], [180, 181, 182]],
             [[ 50,  60, 250], [ 44,  69, 175], [239, 205,   1]]]
 np_array = np.array(py_array)
 h, w, _ = np_array.shape # 配列サイズ
@@ -43,6 +43,12 @@ lower_dim = np.reshape(np_array, [-1, 3]) # -1とすると、ほかの要素か�
 
 # R値でソートするのも以下でまとまる
 sorted_array = lower_dim[np.argsort(lower_dim[:, 0])] # 2次元配列のR要素で並べ替え
+print(sorted_array)
+
+# 同値なものがあった場合の処理を実装する場合lexsortが使える
+# lexsortの戻り値もindex
+sort_index = np.lexsort((lower_dim[:, 2], lower_dim[:, 1], lower_dim[:, 0])) # 1番後が最優先でソート、同値ならその前
+sorted_array = lower_dim[sort_index]
 print(sorted_array)
 
 # # 2次元から3次元に戻す
@@ -106,3 +112,8 @@ diff_max = max(r_diff, g_diff, b_diff)
 print()
 print(f"max: r{r_max} g{g_max} b{b_max}")
 print(f"min: r{r_min} g{g_min} b{b_min}")
+
+RGB = [230, 200, 210]
+rgb = np.array(RGB)
+rgb_index = np.argsort(rgb)[::-1]
+print(rgb_index)
