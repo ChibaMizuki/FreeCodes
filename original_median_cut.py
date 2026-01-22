@@ -71,6 +71,22 @@ def get_max_range_index(bucket:np.ndarray):
     max_index = max_value.index(max_range)
     return max_index
 
+def color_mapping(image:np.ndarray, color_palette:np.ndarray):
+    h, w, _ = image.shape
+    # int16とすることで負の値も扱えるようにする
+    img = image.reshape(-1, 3).astype(np.int16) # (h*w, 3)
+    pal = color_palette.astype(np.int16) # (need_color, 3)
+
+    # ここらへんは紙とペンで図示した方がわかりやすい
+    # 最終的に(h*w, need_color, 3)という形にしたいから
+    # (h*w, 1, 3) - (1, need_color, 3) としている
+    diff = img[:, None, :] - pal[None, :, :] # numpyのブロードキャストという考え方
+    dist = np.sum(diff ** 2, axis=2)
+    nearest = np.argmin(dist, axis=1) # axis1方向に色との距離が並んでいる
+
+    quantized = pal[nearest].astype(np.uint8)
+    return quantized.reshape(h, w, 3)
+
 if __name__ == "__main__":
     img = cv2.imread("video/small_img.png")
     if img is None:
@@ -78,7 +94,7 @@ if __name__ == "__main__":
 
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    need_color = 8
+    need_color = 24
     color = []
     bucket = [three_to_two(img)]
     # 1.バケット選択 <- 最大レンジを持つバケット
@@ -96,8 +112,16 @@ if __name__ == "__main__":
 
     for i in range(len(bucket)):
         color.append(make_color(bucket[i]))
-    print(color)
+    color = np.array(color, dtype=np.uint8)
+    color = color[color[:, 0].argsort()]
+
+    quantized_img = color_mapping(img, color)
+    quantized_img = cv2.cvtColor(quantized_img, cv2.COLOR_RGB2BGR)
+
+    color = color.tolist()
     palette = color_palette(color)
-    cv2.imshow("", palette)
+
+    cv2.imshow("color palette", palette)
+    cv2.imshow("quantized image", quantized_img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
