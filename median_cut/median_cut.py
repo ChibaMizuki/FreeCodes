@@ -74,8 +74,8 @@ def get_max_range_index(bucket:np.ndarray):
 def color_mapping(image:np.ndarray, color_palette:np.ndarray):
     h, w, _ = image.shape
     # int16とすることで負の値も扱えるようにする
-    img = image.reshape(-1, 3).astype(np.int16) # (h*w, 3)
-    pal = color_palette.astype(np.int16) # (need_color, 3)
+    img = image.reshape(-1, 3).astype(np.int32) # (h*w, 3)
+    pal = color_palette.astype(np.int32) # (need_color, 3)
 
     # ここらへんは紙とペンで図示した方がわかりやすい
     # 最終的に(h*w, need_color, 3)という形にしたいから
@@ -94,7 +94,7 @@ if __name__ == "__main__":
 
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    need_color = 24
+    need_color = 8
     color = []
     bucket = [three_to_two(img)]
     # 1.バケット選択 <- 最大レンジを持つバケット
