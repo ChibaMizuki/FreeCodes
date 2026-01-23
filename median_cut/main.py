@@ -18,6 +18,7 @@ from PySide6.QtWidgets import(
     QComboBox,
     QFileDialog,
     QMessageBox,
+    QScrollArea,
 )
 from PySide6.QtCore import(
     Signal,
@@ -53,6 +54,7 @@ class ShowImageWindow(QMainWindow):
         layout = QVBoxLayout(widget)
 
         self.image_label = QLabel()
+        self.scroll_area = QScrollArea()
         self.palette_label = QLabel()
         layout.addWidget(self.image_label, 4) # addWidgetの第2引数で比率指定できるっぽい
         layout.addWidget(self.palette_label, 1)
@@ -82,12 +84,16 @@ class ImageSelect(QWidget):
     finished = Signal(np.ndarray, np.ndarray)
     def __init__(self):
         super().__init__()
-        self.resize(200, 50)
+        self.resize(300, 50)
         self.setWindowFlag(Qt.WindowStaysOnTopHint)
 
         layout = QHBoxLayout(self)
         button = QPushButton("select")
+        colors = ["2", "4", "8", "16", "32"]
+        self.need_color = QComboBox()
+        self.need_color.addItems(colors)
         button.clicked.connect(self.open)
+        layout.addWidget(self.need_color)
         layout.addWidget(button)
 
     def open(self):
@@ -103,7 +109,8 @@ class ImageSelect(QWidget):
             QMessageBox.information(self, "終了", "終了")
             self.median_cut_thread.deleteLater()
 
-        self.worker = MedianCutWorker(file, 8)
+        color_size = self.need_color.currentText()
+        self.worker = MedianCutWorker(file, int(color_size))
         self.median_cut_thread = QThread()
         self.worker.moveToThread(self.median_cut_thread)
 
@@ -230,10 +237,10 @@ class MedianCutWorker(QObject):
         self.color = self.color[self.color[:, 0].argsort()]
 
         quantized_img = self.color_mapping(self.img, self.color)
-        quantized_img = cv2.cvtColor(quantized_img, cv2.COLOR_RGB2BGR)
+        # quantized_img = cv2.cvtColor(quantized_img, cv2.COLOR_RGB2BGR)
 
         self.color = self.color.tolist()
-        palette = color_palette(self.color, mode="h")
+        palette = color_palette(self.color)
 
 
         self.finished.emit(quantized_img, palette)

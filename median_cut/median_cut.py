@@ -1,6 +1,11 @@
-from color_palette import color_palette
+import sys
+import os
 import cv2
 import numpy as np
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from color_palette import color_palette
+
 
 # ここら辺の処理はlexsortで簡略化できるっぽい
 def rgb_diff(color_array:np.ndarray):
@@ -88,7 +93,7 @@ def color_mapping(image:np.ndarray, color_palette:np.ndarray):
     return quantized.reshape(h, w, 3)
 
 if __name__ == "__main__":
-    img = cv2.imread("video/small_img.png")
+    img = cv2.imread("../video/Mizuki/001.PNG")
     if img is None:
         raise RuntimeError("画像の読み込みに失敗しています")
 
