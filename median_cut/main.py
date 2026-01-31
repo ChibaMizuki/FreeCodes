@@ -1,9 +1,7 @@
 import sys
 import os
-import io
 import cv2
 import numpy as np
-from PIL import Image
 from PySide6.QtWidgets import(
     QApplication,
     QMainWindow,
@@ -17,7 +15,6 @@ from PySide6.QtWidgets import(
     QWidget,
     QComboBox,
     QFileDialog,
-    QMessageBox,
     QScrollArea,
 )
 from PySide6.QtCore import(
@@ -38,6 +35,8 @@ class ShowImageWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.resize(1000, 800)
+        self.image_pixmap = None
+        self.palette_pixmap = None
 
         self.select = ImageSelect()
         self.select.show()
@@ -45,19 +44,20 @@ class ShowImageWindow(QMainWindow):
 
         widget = QWidget()
         self.setCentralWidget(widget)
-        # image_widget = QWidget()
-        # image_widget.setStyleSheet("background: black;")
-        # image_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        # palette_widget = QWidget()
-        # palette_widget.setStyleSheet("background: black;")
-
         layout = QVBoxLayout(widget)
 
         self.image_label = QLabel()
-        self.scroll_area = QScrollArea()
+        self.image_label.setStyleSheet("background: black;")
+        self.image_label.setAlignment(Qt.AlignCenter)
         self.palette_label = QLabel()
+        self.palette_label.setStyleSheet("background: black;")
+        self.palette_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.palette_label.setAlignment(Qt.AlignCenter)
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setWidget(self.palette_label)
         layout.addWidget(self.image_label, 4) # addWidgetの第2引数で比率指定できるっぽい
-        layout.addWidget(self.palette_label, 1)
+        layout.addWidget(self.scroll_area, 1)
 
     def ndarray_to_qpixmap(self, img:np.ndarray):
         h, w, ch = img.shape
@@ -66,21 +66,38 @@ class ShowImageWindow(QMainWindow):
         return QPixmap.fromImage(qimg)
     
     def show_images(self, img, palette):
-        pix = self.ndarray_to_qpixmap(img)
-        self.image_label.setPixmap(pix.scaled(
-            self.image_label.size(),
-            Qt.KeepAspectRatio,
-            Qt.SmoothTransformation
-        ))
+        self.image_pixmap = self.ndarray_to_qpixmap(img)
+        self.palette_pixmap = self.ndarray_to_qpixmap(palette)
+        self.update_pixmaps()
+        
+    def update_pixmaps(self):
+        if self.image_pixmap:
+            self.image_label.setPixmap(
+                self.image_pixmap.scaled(
+                    self.image_label.size(),
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation
+                )
+            )
 
-        pal = self.ndarray_to_qpixmap(palette)
-        self.palette_label.setPixmap(pal)
+        if self.palette_pixmap:
+            self.palette_label.setPixmap(
+                self.palette_pixmap.scaled(
+                    self.palette_label.size(),
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation
+                )
+            )
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.update_pixmaps()
 
     def closeEvent(self, event):
         self.select.close()
 
 
-class ImageSelect(QWidget):
+class ImageSelect(QDialog):
     finished = Signal(np.ndarray, np.ndarray)
     def __init__(self):
         super().__init__()
@@ -89,7 +106,7 @@ class ImageSelect(QWidget):
 
         layout = QHBoxLayout(self)
         button = QPushButton("select")
-        colors = ["2", "4", "8", "16", "32"]
+        colors = [str(x) for x in range(2, 33)]
         self.need_color = QComboBox()
         self.need_color.addItems(colors)
         button.clicked.connect(self.open)
@@ -99,15 +116,11 @@ class ImageSelect(QWidget):
     def open(self):
         file, _ = QFileDialog.getOpenFileName(self, "select image file")
         if file:
-            print(file)
             self.process(file)
     
     def process(self, file):
         def error():
             print("画像の読み込みに失敗しました")
-        def finish(img, pal):
-            QMessageBox.information(self, "終了", "終了")
-            self.median_cut_thread.deleteLater()
 
         color_size = self.need_color.currentText()
         self.worker = MedianCutWorker(file, int(color_size))
@@ -119,7 +132,7 @@ class ImageSelect(QWidget):
         self.worker.finished.connect(self.finished)
         self.worker.finished.connect(self.median_cut_thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
-        self.median_cut_thread.finished.connect(finish)
+        self.median_cut_thread.finished.connect(self.median_cut_thread.deleteLater)
 
         self.median_cut_thread.start()
 
@@ -221,8 +234,6 @@ class MedianCutWorker(QObject):
         return quantized.reshape(h, w, 3)
     
     def run(self):
-        print("run")
-
         while len(self.bucket) < self.need_color:
             index = self.get_max_range_index(self.bucket)
             max_range_bucket = self.bucket.pop(index)
@@ -240,7 +251,7 @@ class MedianCutWorker(QObject):
         # quantized_img = cv2.cvtColor(quantized_img, cv2.COLOR_RGB2BGR)
 
         self.color = self.color.tolist()
-        palette = color_palette(self.color)
+        palette = color_palette(self.color, mode="h")
 
 
         self.finished.emit(quantized_img, palette)

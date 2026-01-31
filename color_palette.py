@@ -4,7 +4,7 @@ import numpy as np
 MODE = {"s", "v", "h"}
 CELL_SIZE = 120
 
-def color_palette(color:list, mode:str=None):
+def color_palette(color:list, mode:str=None, rgb:bool=True):
     if not color:
         raise ValueError("colors must not be empty")
     if not mode or not mode in MODE:
@@ -18,7 +18,10 @@ def color_palette(color:list, mode:str=None):
         for i in range(d):
             for j in range(d):
                 if (i * d + j) < len(color):
-                    palette[i*CELL_SIZE:(i+1)*CELL_SIZE, j*CELL_SIZE:(j+1)*CELL_SIZE, :] = color[i*d+j][::-1]
+                    if rgb:
+                        palette[i*CELL_SIZE:(i+1)*CELL_SIZE, j*CELL_SIZE:(j+1)*CELL_SIZE, :] = color[i*d+j]
+                    else:    
+                        palette[i*CELL_SIZE:(i+1)*CELL_SIZE, j*CELL_SIZE:(j+1)*CELL_SIZE, :] = color[i*d+j][::-1]
 
     elif mode == "v":
         d = len(color)
@@ -27,7 +30,10 @@ def color_palette(color:list, mode:str=None):
         palette = np.zeros((height, width, 3), dtype=np.uint8)
 
         for i in range(d):
-            palette[i*CELL_SIZE:(i+1)*CELL_SIZE, :, :] = color[i][::-1]
+            if rgb:
+                palette[i*CELL_SIZE:(i+1)*CELL_SIZE, :, :] = color[i]
+            else:
+                palette[i*CELL_SIZE:(i+1)*CELL_SIZE, :, :] = color[i][::-1]
 
     elif mode == "h":
         d = len(color)
@@ -36,6 +42,9 @@ def color_palette(color:list, mode:str=None):
         palette = np.zeros((height, width, 3), dtype=np.uint8)
 
         for i in range(d):
-            palette[:, i*CELL_SIZE:(i+1)*CELL_SIZE, :] = color[i][::-1]
+            if rgb:
+                palette[:, i*CELL_SIZE:(i+1)*CELL_SIZE, :] = color[i]
+            else:
+                palette[:, i*CELL_SIZE:(i+1)*CELL_SIZE, :] = color[i][::-1]
 
     return palette
