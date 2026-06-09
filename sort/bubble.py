@@ -1,10 +1,5 @@
-import random
-
-array = [i for i in range(1, 11)]
-random.shuffle(array)
-print(array)
-
-def bubble_sort(array):
+def bubble_sort(a):
+    array = a
     n = len(array)
 
     for i in range(n):
@@ -12,9 +7,9 @@ def bubble_sort(array):
 
         for j in range(n - i - 1):
             if array[j] > array[j+1]:
-                array[j], array[j+1] = array[j+1], array[j]
+                array[j], array[j + 1] = array[j + 1], array[j]
                 swapped = True
-                yield array
+                yield (j, j+1)
 
         if not swapped:
             break
