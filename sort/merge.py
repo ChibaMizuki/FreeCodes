@@ -1,5 +1,6 @@
 base = []
 history = []
+merge_range = []
 
 def merge_sort(a):
     if len(a) <= 1:
@@ -41,6 +42,7 @@ def index_history(left, right, merged_list):
     base[start:end] = merged_list
 
     history.append(base.copy())
+    merge_range.append([start, end])
 
 # main関数
 def merged_history(array):
@@ -50,4 +52,4 @@ def merged_history(array):
     history = []
     _ = merge_sort(array)
 
-    return history
+    return history, merge_range

@@ -1,6 +1,7 @@
 import sys
 import random
 
+from selection import selection_sort
 from bubble import bubble_sort
 from merge import merged_history
 
@@ -45,6 +46,7 @@ class MainWindow(QMainWindow):
         self.interval = 50
         self.bars = []
 
+        self.get_selection_index = False
         self.get_bubble_index = False
 
         self.merge_index = 0
@@ -52,6 +54,7 @@ class MainWindow(QMainWindow):
 
         self.dialog = DialogWindow()
         self.dialog.shfl.connect(self.shuffle_array)
+        self.dialog.slct.connect(self.start_select_timer)
         self.dialog.bbl.connect(self.start_bubble_timer)
         self.dialog.mrg.connect(self.start_merge_timer)
         self.dialog.bg.connect(self.start_bogo_timer)
@@ -61,8 +64,10 @@ class MainWindow(QMainWindow):
         self.array = [i for i in range(1, self.array_size)]
         random.shuffle(self.array)
 
-        self.set_bars()
+        self.reset_bars()
 
+        self.select_timer = QTimer(self)
+        self.select_timer.timeout.connect(self.slct_sort)
         self.bubble_timer = QTimer(self)
         self.bubble_timer.timeout.connect(self.bbl_sort)
         self.merge_timer = QTimer(self)
@@ -70,7 +75,7 @@ class MainWindow(QMainWindow):
         self.bogo_timer = QTimer(self)
         self.bogo_timer.timeout.connect(self.check_bogo_sort)
     
-    def set_bars(self):
+    def reset_bars(self):
         self.bars = []
         for i in range(self.array_size - 1):
             bar = Bar(i, self.array[i])
@@ -81,7 +86,8 @@ class MainWindow(QMainWindow):
     def shuffle_array(self):
         self.scene.clear()
 
-        # バブルソート初期化
+        # ソートインデックス初期化
+        self.get_select_index = False
         self.get_bubble_index = False
 
         #マージソート初期化
@@ -89,13 +95,47 @@ class MainWindow(QMainWindow):
         self.merge_history = []
     
         random.shuffle(self.array)
-        self.set_bars()
+        self.reset_bars()
         self.scene.update()
+
+    # ここから選択ソート
+    def start_select_timer(self):
+        self.set_disabled()
+        self.select_timer.start(self.interval)
+
+    def slct_sort(self):
+        if not self.get_selection_index:
+            self.select_index = selection_sort(self.array)
+            self.get_selection_index = True
+
+        try:
+            a, b = next(self.select_index)
+            self.insert(a, b)
+        except StopIteration:
+            self.select_timer.stop()
+            self.set_enabled()
+            QMessageBox.information(self, "Finish", "ソート完了")
+            self.get_select_index = False
+
+    def insert(self, a, min_index):
+        for bar in self.bars:
+            bar.setBrush(QBrush(Qt.GlobalColor.white))
+
+        bar = self.bars.pop(min_index)
+        self.bars.insert(a, bar)
+
+        self.bars[a].setX(BLOCK_SIZE * a)
+        if a < ARRAY_SIZE:
+            for bar in self.bars[a+1:min_index+1]:
+                bar.setX(bar.x() + BLOCK_SIZE)
+        
+        self.scene.update()
+        
 
     # ここからバブルソート
     def start_bubble_timer(self):
         self.set_disabled()
-        self.bubble_timer.start(self.interval)
+        self.bubble_timer.start(self.interval // 2)
 
     def bbl_sort(self):
         if not self.get_bubble_index:
@@ -132,7 +172,7 @@ class MainWindow(QMainWindow):
 
     def merge_sort(self):
         if self.merge_history == []:
-            self.merge_history = merged_history(self.array)
+            self.merge_history, self.m_range = merged_history(self.array)
 
         if self.merge_index < len(self.merge_history):
             self.update_bar(self.merge_history[self.merge_index])
@@ -140,14 +180,19 @@ class MainWindow(QMainWindow):
             self.merge_index += 1
         else:
             self.merge_timer.stop()
-            QMessageBox(self, "Finish", "ソート完了")
+            QMessageBox.information(self, "Finish", "ソート完了")
             self.set_enabled()
 
     def update_bar(self, array):
         self.scene.clear()
         self.bars = []
+        m_r = self.m_range[self.merge_index]
+        start = m_r[0]
+        end = m_r[1]
         for i, a in enumerate(array):
             bar = Bar(i, a)
+            if start <= i <= end:
+                bar.setBrush(QBrush(Qt.GlobalColor.blue))
             self.bars.append(bar)
             self.scene.addItem(bar)
 
@@ -168,6 +213,8 @@ class MainWindow(QMainWindow):
 
     # タイマー停止
     def stop_timer(self):
+        if self.select_timer.isActive():
+            self.select_timer.stop()
         if self.bubble_timer.isActive():
             self.bubble_timer.stop()
         if self.merge_timer.isActive():
@@ -179,6 +226,7 @@ class MainWindow(QMainWindow):
     # ボタンを押下可能に
     def set_enabled(self):
         self.dialog.shuffle_button.setEnabled(True)
+        self.dialog.selection_button.setEnabled(True)
         self.dialog.bubble_button.setEnabled(True)
         self.dialog.merge_button.setEnabled(True)
         self.dialog.bogo_button.setEnabled(True)
@@ -186,6 +234,7 @@ class MainWindow(QMainWindow):
     # 不可能に
     def set_disabled(self):
         self.dialog.shuffle_button.setEnabled(False)
+        self.dialog.selection_button.setEnabled(False)
         self.dialog.bubble_button.setEnabled(False)
         self.dialog.merge_button.setEnabled(False)
         self.dialog.bogo_button.setEnabled(False)
@@ -223,6 +272,7 @@ class Bar(QGraphicsRectItem):
 
 class DialogWindow(QDialog):
     shfl = Signal()
+    slct = Signal()
     bbl = Signal()
     mrg = Signal()
     bg = Signal()
@@ -238,6 +288,10 @@ class DialogWindow(QDialog):
         self.shuffle_button = QPushButton("再配置")
         self.shuffle_button.clicked.connect(self.shuffle)
         layout.addWidget(self.shuffle_button)
+
+        self.selection_button = QPushButton("選択ソート")
+        self.selection_button.clicked.connect(self.select)
+        layout.addWidget(self.selection_button)
 
         self.bubble_button = QPushButton("バブルソート")
         self.bubble_button.clicked.connect(self.bubble)
@@ -259,6 +313,9 @@ class DialogWindow(QDialog):
 
     def shuffle(self):
         self.shfl.emit()
+
+    def select(self):
+        self.slct.emit()
 
     def bubble(self):
         self.bbl.emit()
