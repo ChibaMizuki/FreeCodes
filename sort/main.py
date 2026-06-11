@@ -87,7 +87,7 @@ class MainWindow(QMainWindow):
         self.scene.clear()
 
         # ソートインデックス初期化
-        self.get_select_index = False
+        self.get_selection_index = False
         self.get_bubble_index = False
 
         #マージソート初期化
@@ -101,6 +101,8 @@ class MainWindow(QMainWindow):
     # ここから選択ソート
     def start_select_timer(self):
         self.set_disabled()
+        for bar in self.bars:
+            bar.setBrush(QBrush(Qt.GlobalColor.white))
         self.select_timer.start(self.interval)
 
     def slct_sort(self):
@@ -110,27 +112,12 @@ class MainWindow(QMainWindow):
 
         try:
             a, b = next(self.select_index)
-            self.insert(a, b)
+            self.change(a, b)
         except StopIteration:
             self.select_timer.stop()
             self.set_enabled()
             QMessageBox.information(self, "Finish", "ソート完了")
-            self.get_select_index = False
-
-    def insert(self, a, min_index):
-        for bar in self.bars:
-            bar.setBrush(QBrush(Qt.GlobalColor.white))
-
-        bar = self.bars.pop(min_index)
-        self.bars.insert(a, bar)
-
-        self.bars[a].setX(BLOCK_SIZE * a)
-        if a < ARRAY_SIZE:
-            for bar in self.bars[a+1:min_index+1]:
-                bar.setX(bar.x() + BLOCK_SIZE)
-        
-        self.scene.update()
-        
+            self.get_selection_index = False
 
     # ここからバブルソート
     def start_bubble_timer(self):
@@ -163,6 +150,18 @@ class MainWindow(QMainWindow):
         self.bars[b].setX(a_x)
 
         self.bars[a], self.bars[b] = self.bars[b], self.bars[a]
+        self.scene.update()
+    
+    def insert(self, a, min_index):
+
+        bar = self.bars.pop(min_index)
+        self.bars.insert(a, bar)
+
+        self.bars[a].setX(BLOCK_SIZE * a)
+        if a < ARRAY_SIZE:
+            for bar in self.bars[a+1:min_index+1]:
+                bar.setX(bar.x() + BLOCK_SIZE)
+        
         self.scene.update()
 
     # ここからマージソート
