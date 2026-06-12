@@ -7,7 +7,8 @@ def selection_sort(array):
         for j in range(i + 1, n):
             if a[j] < a[minimum]:
                 minimum = j
+            
+            yield j, minimum
         
         if i != minimum:
-            yield i, minimum
             a[i], a[minimum] = a[minimum], a[i]

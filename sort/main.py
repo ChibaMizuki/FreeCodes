@@ -29,7 +29,7 @@ from PySide6.QtCore import (
     QTimer,
 )
 
-ARRAY_SIZE = 150
+ARRAY_SIZE = 50
 BLOCK_SIZE = 1000 / ARRAY_SIZE
 
 
@@ -46,6 +46,8 @@ class MainWindow(QMainWindow):
         self.array_size = ARRAY_SIZE + 1
         self.interval = 50
         self.bars = []
+        
+        self.count = 0
 
         self.get_selection_index = False
         self.get_bubble_index = False
@@ -86,6 +88,8 @@ class MainWindow(QMainWindow):
     # 再配置
     def shuffle_array(self):
         self.scene.clear()
+        
+        self.count = 0
 
         # ソートインデックス初期化
         self.get_selection_index = False
@@ -104,7 +108,7 @@ class MainWindow(QMainWindow):
         self.set_disabled()
         for bar in self.bars:
             bar.setBrush(QBrush(Qt.GlobalColor.white))
-        self.select_timer.start(self.interval)
+        self.select_timer.start(self.interval // 2)
 
     def slct_sort(self):
         if not self.get_selection_index:
@@ -113,7 +117,13 @@ class MainWindow(QMainWindow):
 
         try:
             a, b = next(self.select_index)
-            self.change(a, b)
+            for bar in self.bars:
+                bar.setBrush(QBrush(Qt.GlobalColor.white))
+            self.bars[a].setBrush(QBrush(Qt.GlobalColor.red))
+            self.bars[b].setBrush(QBrush(Qt.GlobalColor.blue))
+            if a == ARRAY_SIZE - 1:
+                self.change(self.count, b)
+                self.count += 1
         except StopIteration:
             self.select_timer.stop()
             self.set_enabled()
