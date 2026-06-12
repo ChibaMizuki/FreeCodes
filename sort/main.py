@@ -29,8 +29,9 @@ from PySide6.QtCore import (
     QTimer,
 )
 
-BLOCK_SIZE = 10
-ARRAY_SIZE = 100
+ARRAY_SIZE = 150
+BLOCK_SIZE = 1000 / ARRAY_SIZE
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
